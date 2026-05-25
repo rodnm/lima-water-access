@@ -1,0 +1,37 @@
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.env
+# OSM raw data — large files, download on first run
+data/raw/*.osm.pbf
+data/raw/*.zip
+# ogr2ogr GeoJSON caches (60–100 MB) — reproduced from PBF
+data/raw/lima_points.geojson
+data/raw/lima_multipolygons.geojson
+data/processed/
+# Outputs — large/binary files excluded; key deliverables explicitly included
+outputs/*.png
+outputs/*.html
+outputs/*.csv
+outputs/*.gpkg
+outputs/*.geojson
+# Re-include committed deliverables
+!outputs/ivh_table.csv
+!outputs/lima_ivh_lisa.geojson
+!outputs/map_interactive.html
+!outputs/lima_water.gpkg
+!outputs/.gitkeep
+.DS_Store
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+# QGIS backups
+*.qgs~
+*.qgz~
+# Claude local config
+.claude
+# HTTP/library cache directories
+cache/
