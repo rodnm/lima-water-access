@@ -1,17 +1,27 @@
 """Spatial autocorrelation: Global Moran's I and Local Moran's I (LISA)."""
 from __future__ import annotations
 
+import numpy as np
 import geopandas as gpd
 from esda.moran import Moran, Moran_Local
 from libpysal.weights import Queen
 
+# esda ≤ 2.9 uses numpy's global RNG for permutation tests.
+# We seed it immediately before each call so results are reproducible
+# across runs while remaining statistically valid.
+_SEED = 42
+
 
 def compute_moran(
-    gdf: gpd.GeoDataFrame, column: str = "IVH_equal", permutations: int = 999
+    gdf: gpd.GeoDataFrame,
+    column: str = "IVH_equal",
+    permutations: int = 999,
+    seed: int = _SEED,
 ) -> dict:
     W = Queen.from_dataframe(gdf, use_index=False)
     W.transform = "r"
 
+    np.random.seed(seed)
     mi = Moran(gdf[column].values, W, permutations=permutations)
     return {
         "moran_I": round(mi.I, 4),
@@ -22,11 +32,15 @@ def compute_moran(
 
 
 def add_lisa_clusters(
-    gdf: gpd.GeoDataFrame, column: str = "IVH_equal", permutations: int = 999
+    gdf: gpd.GeoDataFrame,
+    column: str = "IVH_equal",
+    permutations: int = 999,
+    seed: int = _SEED,
 ) -> gpd.GeoDataFrame:
     W = Queen.from_dataframe(gdf, use_index=False)
     W.transform = "r"
 
+    np.random.seed(seed)
     lisa = Moran_Local(gdf[column].values, W, permutations=permutations)
     gdf = gdf.copy()
     gdf["lisa_q"] = lisa.q
