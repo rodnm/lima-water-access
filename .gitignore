@@ -37,3 +37,5 @@ dist/
 .claude
 # HTTP/library cache directories
 cache/
+# Research files
+docs/research_files/
