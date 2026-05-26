@@ -17,6 +17,7 @@ outputs/*.csv
 outputs/*.gpkg
 outputs/*.geojson
 outputs/*.tif
+outputs/*.aux.xml
 # Re-include committed deliverables
 !outputs/ivh_table.csv
 !outputs/lima_ivh_lisa.geojson
