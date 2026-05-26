@@ -122,7 +122,7 @@ Luego abrir `qgis/lima_water.qgz` en QGIS. Para más detalles sobre el flujo de 
 
 | Fuente | Descripción | Año | Licencia |
 |--------|-------------|-----|---------|
-| [INEI](https://www.inei.gob.pe/) | Censo 2017 — Acceso al agua por distrito (REDATAM) | 2017 | Pública |
+| [INEI — REDATAM](https://censos2017.inei.gob.pe/redatam/index.htm) | Censo 2017 — Acceso al agua por distrito | 2017 | Pública |
 | [GADM 4.1](https://gadm.org/) | Límites administrativos (Nivel 3 — distrito) | 2022 | Libre para uso académico |
 | [OpenStreetMap](https://www.openstreetmap.org/) | Infraestructura de agua y lugares poblados | 2026 | ODbL |
 | [Geofabrik](https://download.geofabrik.de/) | Extracto OSM de Perú (PBF, procesado con GDAL ogr2ogr) | Diario | ODbL |
@@ -180,6 +180,14 @@ lima-water-access/
     ├── lima_water.gpkg              # GeoPackage con 4 capas para QGIS
     └── map_interactive.html         # Coropleta Folium interactiva
 ```
+
+---
+
+## Licencia
+
+El código fuente de este proyecto se distribuye bajo la [Licencia MIT](LICENSE).
+
+Los datos de terceros mantienen sus licencias originales: datos del Censo INEI (uso público), límites GADM (libre para uso académico), OpenStreetMap (ODbL).
 
 ---
 
