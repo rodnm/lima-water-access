@@ -40,6 +40,21 @@ Este proyecto combina datos del **Censo INEI 2017**, límites administrativos **
 
 **Clústeres LISA**: 3 distritos muestran autocorrelación HH (Alto-Alto) — zonas prioritarias de intervención. Miraflores, San Isidro, San Borja, Magdalena del Mar y Pueblo Libre conforman una zona contigua LL (Bajo-Bajo) con cobertura casi universal.
 
+## Mapas
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="outputs/map_static.png" alt="Coropleta IVH por distrito — Lima Metropolitana" width="100%">
+      <br><sub><b>Índice de Vulnerabilidad Hídrica (IVH)</b><br>Coropleta Jenks 5 clases · UTM 18S · A3 300 dpi</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="outputs/kde_heatmap.png" alt="Densidad KDE de hogares sin acceso formal al agua" width="100%">
+      <br><sub><b>Densidad de hogares sin acceso formal</b><br>KDE Gaussiano σ = 2 000 m · ponderado por distrito · A3 300 dpi</sub>
+    </td>
+  </tr>
+</table>
+
 ## Metodología
 
 ### Índice de Vulnerabilidad Hídrica (IVH)
