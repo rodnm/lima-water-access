@@ -1,10 +1,30 @@
 # Acceso al Agua en Lima — Análisis de Vulnerabilidad Espacial
 
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![QGIS](https://img.shields.io/badge/QGIS-4.0-589632?logo=qgis&logoColor=white)
+![PostGIS](https://img.shields.io/badge/PostGIS-16-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-✓-2496ED?logo=docker&logoColor=white)
+![GeoPandas](https://img.shields.io/badge/GeoPandas-✓-139C5A?logo=geopandas&logoColor=white)
+![Folium](https://img.shields.io/badge/Folium-✓-77B829?logo=leaflet&logoColor=white)
+![OSMnx](https://img.shields.io/badge/OSMnx-✓-000000?logo=openstreetmap&logoColor=white)
+
 **¿Qué distritos de Lima Metropolitana presentan mayor vulnerabilidad en el acceso al agua?**
 
-Este proyecto combina datos del **Censo INEI 2017**, límites administrativos **GADM 4.1** e infraestructura de agua de **OpenStreetMap** para calcular un **Índice de Vulnerabilidad Hídrica (IVH)** en los 43 distritos de Lima. Demuestra habilidades en **QGIS 4**, **PostGIS**, **Python** y **Folium**.
+Este proyecto combina datos del **Censo INEI 2017**, límites administrativos **GADM 4.1** e infraestructura de agua de **OpenStreetMap** para calcular un **Índice de Vulnerabilidad Hídrica (IVH)** en los 43 distritos de Lima.
 
----
+## Stack Tecnológico
+
+| Categoría | Tecnología |
+|-----------|-------------|
+| Lenguaje | Python 3.12 (`uv`) |
+| SIG | QGIS 4.0, GDAL / ogr2ogr |
+| BD espacial | PostGIS 16-3.4 (Docker) |
+| Análisis espacial | GeoPandas, OSMnx, Shapely |
+| Estadística espacial | esda, libpysal |
+| Machine learning | scikit-learn (MinMaxScaler, RobustScaler) |
+| Visualización | Folium, Matplotlib, GeoPackage |
+| Notebooks | Jupyter Notebook |
+| Datos OSM | Geofabrik PBF |
 
 ## Hallazgos principales
 
@@ -19,8 +39,6 @@ Este proyecto combina datos del **Censo INEI 2017**, límites administrativos **
 **I de Moran = 0.266 (p = 0.002, semilla = 42, 999 permutaciones)** — autocorrelación espacial estadísticamente significativa. Los distritos vulnerables no están distribuidos al azar: forman un corredor continuo de alta vulnerabilidad en el norte y el este de Lima.
 
 **Clústeres LISA**: 3 distritos muestran autocorrelación HH (Alto-Alto) — zonas prioritarias de intervención. Miraflores, San Isidro, San Borja, Magdalena del Mar y Pueblo Libre conforman una zona contigua LL (Bajo-Bajo) con cobertura casi universal.
-
----
 
 ## Metodología
 
@@ -49,8 +67,6 @@ Se probaron tres escenarios — correlaciones de Spearman > 0.95 confirman robus
 ### Reproducibilidad de las pruebas estadísticas
 
 Se fija `numpy.random.seed(42)` inmediatamente antes de cada llamada a `esda.Moran` / `esda.Moran_Local`, de modo que los p-valores y las asignaciones de clústeres LISA son idénticos entre ejecuciones (esda 2.9 usa el RNG global de NumPy para las pruebas de permutación).
-
----
 
 ## Reproducibilidad
 
@@ -116,8 +132,6 @@ uv run python scripts/generate_kde_heatmap.py
 
 Luego abrir `qgis/lima_water.qgz` en QGIS — el proyecto carga las 4 capas ya estilizadas y con el Print Layout configurado.
 
----
-
 ## Fuentes de datos
 
 | Fuente | Descripción | Año | Licencia |
@@ -127,8 +141,6 @@ Luego abrir `qgis/lima_water.qgz` en QGIS — el proyecto carga las 4 capas ya e
 | [OpenStreetMap](https://www.openstreetmap.org/) | Infraestructura de agua y lugares poblados | 2026 | ODbL |
 | [Geofabrik](https://download.geofabrik.de/) | Extracto OSM de Perú (PBF, procesado con GDAL ogr2ogr) | Diario | ODbL |
 
----
-
 ## Limitaciones
 
 - **Los datos del Censo son de 2017** — los más recientes disponibles. La cobertura puede haber mejorado desde entonces, especialmente en zonas de expansión periurbana.
@@ -136,8 +148,6 @@ Luego abrir `qgis/lima_water.qgz` en QGIS — el proyecto carga las 4 capas ya e
 - **Los pesos iguales en el escenario base** son una simplificación consciente. El análisis de sensibilidad confirma que los rankings son estables entre esquemas de ponderación (Spearman > 0.95).
 - **Las fuentes informales de agua** (camiones cisterna, pilones compartidos) no quedan completamente capturadas por las métricas de red formal.
 - **La granularidad es distrital** — no captura la desigualdad intra-distrital. El mapa de calor KDE aborda parcialmente esto.
-
----
 
 ## Estructura del proyecto
 
@@ -184,15 +194,11 @@ lima-water-access/
     └── kde_heatmap.png              # Mapa de calor KDE ponderado, 300 dpi
 ```
 
----
-
 ## Licencia
 
 El código fuente de este proyecto se distribuye bajo la [Licencia MIT](LICENSE).
 
 Los datos de terceros mantienen sus licencias originales: datos del Censo INEI (uso público), límites GADM (libre para uso académico), OpenStreetMap (ODbL).
-
----
 
 ## Autor
 
