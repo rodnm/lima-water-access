@@ -4,28 +4,37 @@ Run from the project root with the QGIS-bundled Python:
 
     & "C:/Program Files/QGIS 4.0.2/bin/python-qgis.bat" scripts/create_qgis_project.py
 
-Produces qgis/lima_water.qgz with four styled layers:
-    distritos_ivh    — graduated IVH choropleth (YlOrRd, Jenks 5 classes)
-    lisa_clusters    — categorized LISA labels (HH/LL/LH/Not significant)
-    infra_agua_osm   — categorized water infrastructure markers
-    lugares_poblados — simple grey markers (hidden by default)
+Produces:
+    qgis/lima_water.qgz           — QGIS 4 project with styled layers + print layout
+    qgis/layouts/lima_water_print.qpt  — reusable print layout template
+    outputs/map_static.png        — A3 map exported at 300 dpi
+
+Layers (panel order top → bottom):
+    Infraestructura OSM
+        infra_agua_osm   — categorized markers by type
+        lugares_poblados — simple grey markers (hidden)
+    Analisis IVH
+        lisa_clusters    — categorized LISA labels (70 % opacity)
+        distritos_ivh    — graduated IVH choropleth + district name labels
 """
 from __future__ import annotations
 
+import glob
 import os
 import sys
 from pathlib import Path
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-ROOT = Path(__file__).resolve().parent.parent
-GPKG = str(ROOT / "outputs" / "lima_water.gpkg")
-OUT  = str(ROOT / "qgis" / "lima_water.qgz")
+ROOT     = Path(__file__).resolve().parent.parent
+GPKG     = str(ROOT / "outputs" / "lima_water.gpkg")
+OUT_QGZ  = str(ROOT / "qgis" / "lima_water.qgz")
+OUT_PNG  = str(ROOT / "outputs" / "map_static.png")
+OUT_QPT  = str(ROOT / "qgis" / "layouts" / "lima_water_print.qpt")
 
-# ── QGIS prefix (already set by python-qgis.bat; explicit fallback) ───────────
 QGIS_PREFIX = r"C:\Program Files\QGIS 4.0.2\apps\qgis"
 os.environ.setdefault("QGIS_PREFIX_PATH", QGIS_PREFIX)
 
-# ── Import PyQGIS ──────────────────────────────────────────────────────────────
+# ── PyQGIS imports ─────────────────────────────────────────────────────────────
 from qgis.core import (  # noqa: E402
     QgsApplication,
     QgsCategorizedSymbolRenderer,
@@ -34,14 +43,52 @@ from qgis.core import (  # noqa: E402
     QgsGraduatedSymbolRenderer,
     QgsLayerTreeLayer,
     QgsMarkerSymbol,
+    QgsPalLayerSettings,
+    QgsPrintLayout,
+    QgsLayoutExporter,
+    QgsLayoutItemLabel,
+    QgsLayoutItemLegend,
+    QgsLayoutItemMap,
+    QgsLayoutItemPicture,
+    QgsLayoutItemScaleBar,
+    QgsLayoutPoint,
+    QgsLayoutSize,
     QgsProject,
+    QgsProperty,
+    QgsReadWriteContext,
     QgsReferencedRectangle,
     QgsRectangle,
     QgsRendererCategory,
     QgsRendererRange,
     QgsSingleSymbolRenderer,
+    QgsTextBufferSettings,
+    QgsTextFormat,
+    QgsUnitTypes,
     QgsVectorLayer,
+    QgsVectorLayerSimpleLabeling,
 )
+try:
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtGui import QColor, QFont
+    _AlignLeft    = Qt.AlignmentFlag.AlignLeft
+    _AlignCenter  = Qt.AlignmentFlag.AlignCenter
+    _AlignVCenter = Qt.AlignmentFlag.AlignVCenter
+except ModuleNotFoundError:
+    from PyQt5.QtCore import Qt
+    from PyQt5.QtGui import QColor, QFont
+    _AlignLeft    = Qt.AlignLeft
+    _AlignCenter  = Qt.AlignCenter
+    _AlignVCenter = Qt.AlignVCenter
+
+
+def _bold_font(family: str, size: int) -> QFont:
+    f = QFont(family, size)
+    f.setBold(True)
+    return f
+
+
+def _font(family: str, size: int) -> QFont:
+    return QFont(family, size)
 
 # ── Initialise QGIS (headless) ─────────────────────────────────────────────────
 app = QgsApplication([], False)
@@ -52,15 +99,16 @@ try:
     from qgis.core import Qgis as _Qgis
     print(f"QGIS {_Qgis.QGIS_VERSION}")
 except Exception:
-    print("QGIS initialized")
+    print("QGIS inicializado")
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# LAYER 1 — distritos_ivh: graduated choropleth on IVH_equal
-# Jenks 5-class breaks precomputed with mapclassify.NaturalBreaks
+# CAPAS — renderers
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# ── distritos_ivh — graduated choropleth (Jenks 5 clases) ─────────────────────
 layer_d = QgsVectorLayer(f"{GPKG}|layername=distritos_ivh", "IVH por Distrito", "ogr")
 if not layer_d.isValid():
-    sys.exit(f"ERROR: distritos_ivh failed to load from {GPKG}")
+    sys.exit(f"ERROR: distritos_ivh no cargó desde {GPKG}")
 
 _BREAKS = [-0.019, 0.095, 0.271, 0.423, 0.738, 1.034]
 _COLORS = ["#ffffb2", "#fecc5c", "#fd8d3c", "#f03b20", "#bd0026"]
@@ -75,20 +123,42 @@ _LABELS = [
 ivh_ranges = []
 for i in range(5):
     sym = QgsFillSymbol.createSimple(
-        {"color": _COLORS[i], "outline_color": "#666666", "outline_width": "0.15"}
+        {"color": _COLORS[i], "outline_color": "#808080", "outline_width": "0.15"}
     )
     ivh_ranges.append(QgsRendererRange(_BREAKS[i], _BREAKS[i + 1], sym, _LABELS[i]))
 
-renderer_d = QgsGraduatedSymbolRenderer("IVH_equal", ivh_ranges)
-layer_d.setRenderer(renderer_d)
+layer_d.setRenderer(QgsGraduatedSymbolRenderer("IVH_equal", ivh_ranges))
 print(f"  distritos_ivh  → graduated ({layer_d.featureCount()} features)")
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# LAYER 2 — lisa_clusters: categorized LISA spatial autocorrelation labels
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-layer_l = QgsVectorLayer(f"{GPKG}|layername=lisa_clusters", "Clusters LISA", "ogr")
+# ── Etiquetas de nombres de distrito (todos; QGIS resuelve colisiones) ─────────
+try:
+    pal = QgsPalLayerSettings()
+    pal.fieldName = "NAME_3"
+    pal.enabled = True
+
+    txt = QgsTextFormat()
+    txt.setFont(_bold_font("Arial", 6))
+    txt.setColor(QColor("#1a1a1a"))
+    txt.setSizeUnit(QgsUnitTypes.RenderPoints)
+
+    buf = QgsTextBufferSettings()
+    buf.setEnabled(True)
+    buf.setSize(0.8)
+    buf.setSizeUnit(QgsUnitTypes.RenderMillimeters)
+    buf.setColor(QColor("white"))
+    txt.setBuffer(buf)
+
+    pal.setFormat(txt)
+    layer_d.setLabeling(QgsVectorLayerSimpleLabeling(pal))
+    layer_d.setLabelsEnabled(True)
+    print("  distritos_ivh  → etiquetas activadas")
+except Exception as e:
+    print(f"  AVISO etiquetas: {e}")
+
+# ── lisa_clusters — categorized LISA labels ────────────────────────────────────
+layer_l = QgsVectorLayer(f"{GPKG}|layername=lisa_clusters", "Clusteres LISA", "ogr")
 if not layer_l.isValid():
-    sys.exit(f"ERROR: lisa_clusters failed to load from {GPKG}")
+    sys.exit(f"ERROR: lisa_clusters no cargó desde {GPKG}")
 
 _LISA = [
     ("HH (High-High)",  "#d73027", "HH — Alta vulnerabilidad"),
@@ -106,24 +176,21 @@ for val, color, label in _LISA:
     sym.setOpacity(0.7)
     lisa_cats.append(QgsRendererCategory(val, sym, label))
 
-renderer_l = QgsCategorizedSymbolRenderer("lisa_label", lisa_cats)
-layer_l.setRenderer(renderer_l)
+layer_l.setRenderer(QgsCategorizedSymbolRenderer("lisa_label", lisa_cats))
 print(f"  lisa_clusters  → categorized ({layer_l.featureCount()} features)")
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# LAYER 3 — infra_agua_osm: categorized markers by infrastructure type
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ── infra_agua_osm — categorized markers ──────────────────────────────────────
 layer_i = QgsVectorLayer(
     f"{GPKG}|layername=infra_agua_osm", "Infraestructura de Agua", "ogr"
 )
 if not layer_i.isValid():
-    sys.exit(f"ERROR: infra_agua_osm failed to load from {GPKG}")
+    sys.exit(f"ERROR: infra_agua_osm no cargó desde {GPKG}")
 
 _INFRA = [
     ("drinking_water",  "circle",  "#2166ac", "2",   "Punto de agua potable"),
     ("water_tower",     "square",  "#08306b", "3",   "Torre de agua"),
     ("storage_tank",    "diamond", "#006d2c", "2.5", "Tanque de almacenamiento"),
-    ("pumping_station", "star",    "#6a51a3", "2.5", "Estación de bombeo"),
+    ("pumping_station", "star",    "#6a51a3", "2.5", "Estacion de bombeo"),
 ]
 
 infra_cats = []
@@ -134,19 +201,15 @@ for val, shape, color, size, label in _INFRA:
     )
     infra_cats.append(QgsRendererCategory(val, sym, label))
 
-renderer_i = QgsCategorizedSymbolRenderer("category", infra_cats)
-layer_i.setRenderer(renderer_i)
+layer_i.setRenderer(QgsCategorizedSymbolRenderer("category", infra_cats))
 print(f"  infra_agua_osm → categorized ({layer_i.featureCount()} features)")
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# LAYER 4 — lugares_poblados: simple grey markers (hidden by default)
-#           Mainly used for KDE heatmap in Processing Toolbox
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ── lugares_poblados — simple grey marker (oculto por defecto) ─────────────────
 layer_p = QgsVectorLayer(
     f"{GPKG}|layername=lugares_poblados", "Lugares Poblados", "ogr"
 )
 if not layer_p.isValid():
-    sys.exit(f"ERROR: lugares_poblados failed to load from {GPKG}")
+    sys.exit(f"ERROR: lugares_poblados no cargó desde {GPKG}")
 
 sym_p = QgsMarkerSymbol.createSimple(
     {"name": "circle", "color": "#888888", "size": "1", "outline_style": "no"}
@@ -156,36 +219,41 @@ layer_p.setRenderer(QgsSingleSymbolRenderer(sym_p))
 print(f"  lugares_poblados → single symbol ({layer_p.featureCount()} features)")
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Assemble project
+# PROYECTO — configuración base
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 project = QgsProject.instance()
-project.setTitle("Lima Water Access — IVH 2017")
+project.setTitle("Acceso al Agua en Lima — IVH 2017")
 project.setCrs(QgsCoordinateReferenceSystem("EPSG:32718"))
 
-# Use relative paths so the .qgz is portable within the repo
 try:
     from qgis.core import Qgis
     project.setFilePathStorage(Qgis.FilePathType.Relative)
 except (AttributeError, TypeError):
-    pass  # QGIS version may differ; default is fine
+    pass
 
-# Add layers to map store WITHOUT adding to legend tree (addToLegend=False)
+# Añadir capas al almacén del proyecto (sin agregar al árbol aún)
 for lyr in (layer_d, layer_l, layer_p, layer_i):
     project.addMapLayer(lyr, False)
 
-# Rebuild layer tree: top of panel → rendered on top
+# ── Árbol de capas con grupos ──────────────────────────────────────────────────
 root = project.layerTreeRoot()
-root.insertChildNode(0, QgsLayerTreeLayer(layer_i))   # top: infra points
-root.insertChildNode(1, QgsLayerTreeLayer(layer_p))   # places (hidden)
-root.insertChildNode(2, QgsLayerTreeLayer(layer_l))   # LISA overlay
-root.insertChildNode(3, QgsLayerTreeLayer(layer_d))   # bottom: IVH choropleth
 
-# Hide lugares_poblados in panel
-node_p = root.findLayer(layer_p.id())
+# Grupo "Infraestructura OSM" (arriba del panel → se renderiza encima)
+g_osm = root.insertGroup(0, "Infraestructura OSM")
+g_osm.insertChildNode(0, QgsLayerTreeLayer(layer_i))  # encima dentro del grupo
+g_osm.insertChildNode(1, QgsLayerTreeLayer(layer_p))  # debajo (oculto)
+
+# Grupo "Analisis IVH" (abajo del panel → se renderiza primero como fondo)
+g_ivh = root.insertGroup(1, "Analisis IVH")
+g_ivh.insertChildNode(0, QgsLayerTreeLayer(layer_l))  # LISA encima
+g_ivh.insertChildNode(1, QgsLayerTreeLayer(layer_d))  # IVH de fondo
+
+# Ocultar lugares_poblados
+node_p = g_osm.findLayer(layer_p.id())
 if node_p:
     node_p.setItemVisibilityChecked(False)
 
-# Initial map extent — Lima, UTM 18S, with 5 % padding
+# Extent inicial de Lima (UTM 18S, con 5 % de margen)
 try:
     extent_rect = QgsReferencedRectangle(
         QgsRectangle(249197, 8609962, 327156, 8725142),
@@ -193,15 +261,176 @@ try:
     )
     project.viewSettings().setDefaultViewExtent(extent_rect)
 except AttributeError:
-    pass  # older QGIS API; extent will default to layer bounds
+    pass
 
-# ── Write ──────────────────────────────────────────────────────────────────────
-Path(OUT).parent.mkdir(parents=True, exist_ok=True)
-ok = project.write(OUT)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# PRINT LAYOUT — A3 horizontal (420 × 297 mm)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MM = QgsUnitTypes.LayoutMillimeters
+
+layout = QgsPrintLayout(project)
+layout.initializeDefaults()
+layout.setName("Lima Water Access")
+
+# Página A3 horizontal
+page = layout.pageCollection().pages()[0]
+page.setPageSize(QgsLayoutSize(420, 297, MM))
+
+
+def _pos(item, x, y, w, h):
+    """Posiciona y redimensiona un elemento del layout."""
+    item.attemptMove(QgsLayoutPoint(x, y, MM))
+    item.attemptResize(QgsLayoutSize(w, h, MM))
+
+
+# ── Título principal ───────────────────────────────────────────────────────────
+lbl_title = QgsLayoutItemLabel(layout)
+lbl_title.setText("Vulnerabilidad Hidrica en Lima Metropolitana")
+lbl_title.setFont(_bold_font("Arial", 18))
+lbl_title.setFontColor(QColor("#1a1a2e"))
+lbl_title.setHAlign(_AlignLeft)
+lbl_title.setVAlign(_AlignVCenter)
+layout.addLayoutItem(lbl_title)
+_pos(lbl_title, 10, 6, 400, 18)
+
+# ── Subtítulo ─────────────────────────────────────────────────────────────────
+lbl_sub = QgsLayoutItemLabel(layout)
+lbl_sub.setText(
+    "Indice IVH 2017  |  Deficit de cobertura  |  Densidad de hogares sin acceso"
+    "  |  Distancia a infraestructura OSM"
+)
+lbl_sub.setFont(_font("Arial", 9))
+lbl_sub.setFontColor(QColor("#555555"))
+lbl_sub.setHAlign(_AlignLeft)
+layout.addLayoutItem(lbl_sub)
+_pos(lbl_sub, 10, 26, 400, 8)
+
+# ── Marco del mapa ────────────────────────────────────────────────────────────
+map_item = QgsLayoutItemMap(layout)
+map_item.setExtent(QgsRectangle(249197, 8609962, 327156, 8725142))
+map_item.setCrs(QgsCoordinateReferenceSystem("EPSG:32718"))
+map_item.setFrameEnabled(True)
+layout.addLayoutItem(map_item)
+_pos(map_item, 10, 36, 292, 228)
+
+# ── Leyenda ───────────────────────────────────────────────────────────────────
+legend = QgsLayoutItemLegend(layout)
+legend.setLinkedMap(map_item)
+legend.setAutoUpdateModel(True)
+legend.setTitle("Leyenda")
+legend.setFrameEnabled(True)
+legend.setResizeToContents(True)
+layout.addLayoutItem(legend)
+_pos(legend, 308, 36, 102, 228)
+
+# ── Barra de escala ───────────────────────────────────────────────────────────
+scale = QgsLayoutItemScaleBar(layout)
+scale.setLinkedMap(map_item)
+try:
+    scale.setStyle("Single Box")
+except Exception:
+    pass
+scale.setUnitsPerSegment(10000)   # 10 km por segmento
+scale.setNumberOfSegments(3)
+scale.setNumberOfSegmentsLeft(0)
+scale.setUnitLabel("km")
+scale.setFont(_font("Arial", 7))
+scale.setBackgroundEnabled(True)
+scale.setBackgroundColor(QColor(255, 255, 255, 180))
+layout.addLayoutItem(scale)
+_pos(scale, 14, 252, 110, 8)
+
+# ── Flecha de norte ───────────────────────────────────────────────────────────
+def _find_north_svg() -> str | None:
+    candidates = [
+        r"C:\Program Files\QGIS 4.0.2\apps\qgis\svg\north_arrows\NorthArrow_01.svg",
+        r"C:\Program Files\QGIS 4.0.2\apps\qgis\svg\north_arrows\NorthArrow_02.svg",
+        r"C:\Program Files\QGIS 4.0.2\share\qgis\svg\north_arrows\NorthArrow_01.svg",
+    ]
+    candidates += glob.glob(
+        r"C:\Program Files\QGIS 4.0.2\**\*orth*rrow*.svg", recursive=True
+    )[:5]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    return None
+
+
+north_svg = _find_north_svg()
+if north_svg:
+    north_item = QgsLayoutItemPicture(layout)
+    north_item.setPicturePath(north_svg)
+    try:
+        north_item.setNorthMode(QgsLayoutItemPicture.GridNorth)
+    except AttributeError:
+        pass
+    north_item.setBackgroundEnabled(True)
+    north_item.setBackgroundColor(QColor(255, 255, 255, 180))
+    layout.addLayoutItem(north_item)
+    _pos(north_item, 272, 240, 24, 30)
+    print(f"  Norte SVG: {north_svg}")
+else:
+    # Fallback: etiqueta de texto con símbolo unicode
+    north_lbl = QgsLayoutItemLabel(layout)
+    north_lbl.setText("N")
+    north_lbl.setFont(_bold_font("Arial", 14))
+    north_lbl.setFontColor(QColor("#1a1a1a"))
+    north_lbl.setHAlign(_AlignCenter)
+    north_lbl.setVAlign(_AlignVCenter)
+    north_lbl.setBackgroundEnabled(True)
+    north_lbl.setBackgroundColor(QColor(255, 255, 255, 200))
+    layout.addLayoutItem(north_lbl)
+    _pos(north_lbl, 272, 244, 24, 14)
+    print("  Norte: texto (SVG no encontrado)")
+
+# ── Atribución / fuentes ──────────────────────────────────────────────────────
+lbl_attr = QgsLayoutItemLabel(layout)
+lbl_attr.setText(
+    "Fuentes: INEI 2017  |  OpenStreetMap (ODbL)  |  GADM 4.1  |  "
+    "Proyeccion: UTM Zona 18S (EPSG:32718)  |  2026"
+)
+lbl_attr.setFont(_font("Arial", 7))
+lbl_attr.setFontColor(QColor("#777777"))
+lbl_attr.setHAlign(_AlignLeft)
+layout.addLayoutItem(lbl_attr)
+_pos(lbl_attr, 10, 272, 400, 10)
+
+# Registrar layout en el proyecto
+project.layoutManager().addLayout(layout)
+print("  Print Layout A3 creado")
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# EXPORTAR PNG y guardar plantilla QPT
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+exporter = QgsLayoutExporter(layout)
+
+img_settings = QgsLayoutExporter.ImageExportSettings()
+img_settings.dpi = 300
+
+result = exporter.exportToImage(OUT_PNG, img_settings)
+if result == QgsLayoutExporter.Success:
+    size_kb = Path(OUT_PNG).stat().st_size // 1024
+    print(f"  outputs/map_static.png exportado ({size_kb} KB, 300 dpi)")
+else:
+    print(f"  AVISO: exportToImage devolvio codigo {result}")
+
+# Plantilla QPT
+Path(OUT_QPT).parent.mkdir(parents=True, exist_ok=True)
+try:
+    layout.saveAsTemplate(OUT_QPT, QgsReadWriteContext())
+    print(f"  qgis/layouts/lima_water_print.qpt guardado")
+except Exception as e:
+    print(f"  AVISO QPT: {e}")
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# GUARDAR PROYECTO
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Path(OUT_QGZ).parent.mkdir(parents=True, exist_ok=True)
+ok = project.write(OUT_QGZ)
 app.exitQgis()
 
 if ok:
-    size_kb = Path(OUT).stat().st_size // 1024
-    print(f"\n✓  {OUT}  ({size_kb} KB)")
+    size_kb = Path(OUT_QGZ).stat().st_size // 1024
+    print(f"\n✓  {OUT_QGZ}  ({size_kb} KB)")
 else:
-    sys.exit("✗  project.write() returned False")
+    sys.exit("✗  project.write() devolvio False")

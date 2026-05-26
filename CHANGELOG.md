@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.3.0] — 2026-05-25
+
+### Added
+
+- **Print Layout A3 automático** (`scripts/create_qgis_project.py`): título (18 pt bold), subtítulo, marco del mapa UTM 18S, leyenda enlazada, barra de escala (10 km × 3 segmentos), flecha de norte SVG (NorthArrow_01) y atribución de fuentes.
+- **`outputs/map_static.png`**: exportación automática a 300 dpi desde el script PyQGIS — ya no requiere pasos manuales en QGIS.
+- **`qgis/layouts/lima_water_print.qpt`**: plantilla QPT del Print Layout para edición posterior en QGIS.
+- **Etiquetas de distritos**: los 10 distritos más vulnerables (`rank_equal <= 10`) muestran su nombre en Arial 7 pt con halo blanco; implementado mediante `QgsPalLayerSettings` + `QgsVectorLayerSimpleLabeling`.
+- **Grupos de capas**: panel organizado en "Infraestructura OSM" (infra_agua_osm + lugares_poblados) y "Análisis IVH" (distritos_ivh + lisa_clusters) mediante `QgsLayerTreeGroup`.
+- **Semilla reproducible en Moran's I / LISA** (`src/lima_water/spatial.py`): `np.random.seed(42)` fijado antes de cada llamada a `esda.Moran` / `esda.Moran_Local` — p-valores y asignaciones LISA idénticos entre ejecuciones. Resultado canónico: I=0.266, p=0.002 (999 permutaciones).
+- **Compatibilidad PyQt6/PyQt5**: el script detecta automáticamente qué versión de Qt usa la instalación de QGIS y ajusta los enums (`Qt.AlignmentFlag.AlignLeft` en PyQt6, `Qt.AlignLeft` en PyQt5).
+
+### Changed
+
+- `README.md`: traducido íntegramente al español; sección de reproducibilidad de pruebas estadísticas; `map_static.png` marcado como generado automáticamente.
+- `scripts/create_qgis_project.py`: reescrito completamente — añade layout A3, grupos de capas, etiquetas y exportación PNG en un solo comando headless.
+
+---
+
 ## [0.2.0] — 2026-05-25
 
 ### Fixed

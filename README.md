@@ -95,7 +95,8 @@ uv run jupyter lab notebooks/analysis.ipynb
 | Mapa interactivo | `outputs/map_interactive.html` | Coropleta Folium + marcadores LISA |
 | Capas QGIS | `outputs/lima_water.gpkg` | GeoPackage con 4 capas (distritos_ivh, lisa_clusters, infra_agua_osm, lugares_poblados) |
 | Proyecto QGIS | `qgis/lima_water.qgz` | Proyecto estilizado: coropleta IVH, LISA, marcadores de infraestructura |
-| Mapa estático | `outputs/map_static.png` | Print Layout A3, 300 dpi *(generar desde QGIS)* |
+| Mapa estático | `outputs/map_static.png` | Print Layout A3, 300 dpi — generado automáticamente por `create_qgis_project.py` |
+| Plantilla layout | `qgis/layouts/lima_water_print.qpt` | Plantilla QPT del Print Layout para edición en QGIS |
 | Mapa de calor KDE | `outputs/kde_heatmap.png` | Densidad de kernel de lugares poblados *(generar desde QGIS)* |
 
 ### Flujo de trabajo QGIS

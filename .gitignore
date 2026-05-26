@@ -21,6 +21,7 @@ outputs/*.geojson
 !outputs/lima_ivh_lisa.geojson
 !outputs/map_interactive.html
 !outputs/lima_water.gpkg
+!outputs/map_static.png
 !outputs/.gitkeep
 .DS_Store
 *.egg-info/
