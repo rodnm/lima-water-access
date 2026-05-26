@@ -93,6 +93,19 @@ def _bold_font(family: str, size: int) -> QFont:
 def _font(family: str, size: int) -> QFont:
     return QFont(family, size)
 
+
+def _safe_remove(path: str) -> None:
+    """Remove existing file so GDAL's PNG driver can write a fresh one.
+
+    GDAL's PNG driver does not support update access; if the output file
+    already exists, the layout exporter emits ERROR 6 and may leave the file
+    with only the frame/legend rendered but no map content.
+    """
+    try:
+        Path(path).unlink(missing_ok=True)
+    except Exception:
+        pass
+
 # ── Initialise QGIS (headless) ─────────────────────────────────────────────────
 app = QgsApplication([], False)
 app.setPrefixPath(QGIS_PREFIX, True)
@@ -310,7 +323,6 @@ _pos(lbl_sub, 10, 26, 400, 8)
 
 # ── Marco del mapa ────────────────────────────────────────────────────────────
 map_item = QgsLayoutItemMap(layout)
-map_item.setExtent(QgsRectangle(249197, 8609962, 327156, 8725142))
 map_item.setCrs(QgsCoordinateReferenceSystem("EPSG:32718"))
 map_item.setFrameEnabled(True)
 # In headless mode there is no active canvas, so the map item has no layers
@@ -319,6 +331,11 @@ map_item.setLayers([layer_d, layer_l, layer_i])
 map_item.setKeepLayerSet(True)
 layout.addLayoutItem(map_item)
 _pos(map_item, 10, 36, 292, 228)
+# setExtent MUST come AFTER _pos: when the item's physical size changes,
+# QGIS reflows the extent to fit the new aspect ratio.  Calling setExtent
+# before _pos leaves the extent with NaN values and the map renders blank.
+map_item.setExtent(QgsRectangle(249197, 8609962, 327156, 8725142))
+map_item.refresh()
 
 # ── Leyenda ───────────────────────────────────────────────────────────────────
 legend = QgsLayoutItemLegend(layout)
@@ -414,6 +431,7 @@ exporter = QgsLayoutExporter(layout)
 img_settings = QgsLayoutExporter.ImageExportSettings()
 img_settings.dpi = 300
 
+_safe_remove(OUT_PNG)
 result = exporter.exportToImage(OUT_PNG, img_settings)
 if result == QgsLayoutExporter.Success:
     size_kb = Path(OUT_PNG).stat().st_size // 1024
@@ -471,6 +489,7 @@ try:
     else:
         print("  KDE: sin campo de peso (ejecuta export_qgis_layers.py para activarlo)")
 
+    _safe_remove(OUT_KDE_TIF)
     _proc.run("qgis:heatmapkerneldensityestimation", kde_params)
 
     kde_layer = QgsRasterLayer(OUT_KDE_TIF, "KDE — Densidad hidrica")
@@ -506,6 +525,7 @@ try:
         kde_layer.dataProvider(), 1, shader
     )
     kde_layer.setRenderer(renderer)
+    kde_layer.triggerRepaint()
 
     # ── Añadir al proyecto (encima del grupo OSM) ─────────────────────────────
     project.addMapLayer(kde_layer, False)
@@ -529,13 +549,15 @@ try:
 
     # Marco del mapa
     kde_map = QgsLayoutItemMap(kde_layout)
-    kde_map.setExtent(QgsRectangle(249197, 8609962, 327156, 8725142))
     kde_map.setCrs(QgsCoordinateReferenceSystem("EPSG:32718"))
     kde_map.setFrameEnabled(True)
     kde_map.setLayers([kde_layer, layer_d])   # KDE encima, contorno distritos
     kde_map.setKeepLayerSet(True)
     kde_layout.addLayoutItem(kde_map)
     _pos(kde_map, 10, 28, 300, 244)
+    # setExtent AFTER _pos — same constraint as the IVH map_item
+    kde_map.setExtent(QgsRectangle(249197, 8609962, 327156, 8725142))
+    kde_map.refresh()
 
     # Leyenda
     kde_legend = QgsLayoutItemLegend(kde_layout)
@@ -589,6 +611,7 @@ try:
     kde_exp = QgsLayoutExporter(kde_layout)
     kde_img = QgsLayoutExporter.ImageExportSettings()
     kde_img.dpi = 300
+    _safe_remove(OUT_KDE_PNG)
     r = kde_exp.exportToImage(OUT_KDE_PNG, kde_img)
     if r == QgsLayoutExporter.Success:
         size_kb = Path(OUT_KDE_PNG).stat().st_size // 1024
