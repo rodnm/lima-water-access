@@ -185,4 +185,4 @@ lima-water-access/
 
 ## Autor
 
-Proyecto de portafolio que demuestra competencias en QGIS 4, PostGIS y análisis de datos espaciales con Python.
+Rodrigo Norabuena
