@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.0] — 2026-05-25
+
+### Added
+
+- **`scripts/generate_kde_heatmap.py`**: genera `outputs/kde_heatmap.png` programáticamente sin depender de QGIS. Metodología: histograma 2D ponderado (peso = `hogares_sin_acceso` por distrito, obtenido de `ivh_table.csv` via spatial join) + filtro Gaussiano `scipy.ndimage.gaussian_filter` con σ=2 000 m (equivalente al radio=2 000 m del Heatmap KDE de QGIS Processing). Grid de 780×1 152 píxeles a 100 m de resolución sobre la bbox de Lima UTM 18S. Renderizado en A3 a 300 dpi con paleta Inferno, contorno de distritos, etiquetas de los 10 más vulnerables, barra de escala manual (10 km) y flecha de norte.
+- **`outputs/kde_heatmap.png`**: deliverable generado (972 KB, 300 dpi).
+- **`test_pipeline.py` — Bloque 6**: llama a `generate_kde_heatmap.py` al final del pipeline; omite con advertencia si `lima_water.gpkg` no existe.
+- **`.gitignore`**: excepción `!outputs/kde_heatmap.png` añadida.
+
+### Changed
+
+- `README.md`: fila KDE actualizada a "generado automáticamente"; flujo de trabajo QGIS incluye el comando `uv run python scripts/generate_kde_heatmap.py`.
+
+---
+
 ## [0.3.0] — 2026-05-25
 
 ### Added

@@ -81,4 +81,15 @@ folium.Choropleth(
 m.save(str(OUTPUTS / "map_interactive.html"))
 print(f"  Map saved to {OUTPUTS / 'map_interactive.html'}")
 
+print("\n=== Block 6: KDE Heatmap ===")
+_gpkg = OUTPUTS / "lima_water.gpkg"
+if _gpkg.exists():
+    import subprocess
+    r = subprocess.run([sys.executable, "scripts/generate_kde_heatmap.py"], check=False)
+    if r.returncode != 0:
+        print("  ⚠  KDE heatmap failed (see error above) — continuing")
+else:
+    print(f"  ⚠  {_gpkg} not found — skipping KDE")
+    print("     Run: uv run python scripts/export_qgis_layers.py")
+
 print("\n=== ALL TESTS PASSED ===")

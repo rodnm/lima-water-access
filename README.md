@@ -97,7 +97,7 @@ uv run jupyter lab notebooks/analysis.ipynb
 | Proyecto QGIS | `qgis/lima_water.qgz` | Proyecto estilizado: coropleta IVH, LISA, marcadores de infraestructura |
 | Mapa estático | `outputs/map_static.png` | Print Layout A3, 300 dpi — generado automáticamente por `create_qgis_project.py` |
 | Plantilla layout | `qgis/layouts/lima_water_print.qpt` | Plantilla QPT del Print Layout para edición en QGIS |
-| Mapa de calor KDE | `outputs/kde_heatmap.png` | Densidad de kernel de lugares poblados *(generar desde QGIS)* |
+| Mapa de calor KDE | `outputs/kde_heatmap.png` | Densidad KDE ponderada por hogares sin acceso — generado automáticamente por `generate_kde_heatmap.py` |
 
 ### Flujo de trabajo QGIS
 
@@ -107,11 +107,14 @@ El proyecto QGIS se genera programáticamente — no es necesario estilizar manu
 # Regenerar GeoPackage (si outputs/lima_water.gpkg no existe)
 uv run python scripts/export_qgis_layers.py
 
-# Regenerar proyecto QGIS (requiere QGIS 4 instalado)
+# Regenerar proyecto QGIS + map_static.png (requiere QGIS 4 instalado)
 & "C:/Program Files/QGIS 4.0.2/bin/python-qgis.bat" scripts/create_qgis_project.py
+
+# Regenerar mapa de calor KDE (Python puro, sin QGIS)
+uv run python scripts/generate_kde_heatmap.py
 ```
 
-Luego abrir `qgis/lima_water.qgz` en QGIS. Para generar los entregables visuales restantes (Print Layout → `map_static.png`, mapa de calor KDE → `kde_heatmap.png`) seguir **[`docs/qgis_workflow.md`](docs/qgis_workflow.md)** (pasos 8–9).
+Luego abrir `qgis/lima_water.qgz` en QGIS. Para más detalles sobre el flujo de trabajo QGIS ver **[`docs/qgis_workflow.md`](docs/qgis_workflow.md)**.
 
 ---
 

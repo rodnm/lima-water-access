@@ -22,6 +22,7 @@ outputs/*.geojson
 !outputs/map_interactive.html
 !outputs/lima_water.gpkg
 !outputs/map_static.png
+!outputs/kde_heatmap.png
 !outputs/.gitkeep
 .DS_Store
 *.egg-info/
