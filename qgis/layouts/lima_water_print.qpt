@@ -10,7 +10,7 @@
      <Option name="type" type="QString" value="collection"/>
     </Option>
    </data_defined_properties>
-   <layer class="SimpleFill" enabled="1" id="{3bc3750d-dcbb-4d47-b8de-b2cfa10ee6e0}" locked="0" pass="0">
+   <layer class="SimpleFill" enabled="1" id="{a1c2b0a8-f599-4a20-bb6e-e5d41a274267}" locked="0" pass="0">
     <Option type="Map">
      <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
      <Option name="color" type="QString" value="255,255,255,255,rgb:1,1,1,1"/>
@@ -33,7 +33,7 @@
     </data_defined_properties>
    </layer>
   </symbol>
-  <LayoutItem background="true" blendMode="0" excludeFromExports="0" frame="false" frameJoinStyle="miter" groupUuid="" id="" itemRotation="0" opacity="1" outlineWidthM="0.3,mm" position="0,0,mm" positionLock="false" positionOnPage="0,0,mm" referencePoint="0" size="420,297,mm" templateUuid="{8f2e8590-f1bd-42c4-a1c0-9ea01a6fc258}" type="65638" uuid="{8f2e8590-f1bd-42c4-a1c0-9ea01a6fc258}" visibility="1" zValue="0">
+  <LayoutItem background="true" blendMode="0" excludeFromExports="0" frame="false" frameJoinStyle="miter" groupUuid="" id="" itemRotation="0" opacity="1" outlineWidthM="0.3,mm" position="0,0,mm" positionLock="false" positionOnPage="0,0,mm" referencePoint="0" size="420,297,mm" templateUuid="{c4b0124d-2a60-456e-94b3-f02db9af388b}" type="65638" uuid="{c4b0124d-2a60-456e-94b3-f02db9af388b}" visibility="1" zValue="0">
    <FrameColor alpha="255" blue="0" green="0" red="0"/>
    <BackgroundColor alpha="255" blue="255" green="255" red="255"/>
    <LayoutObject>
@@ -56,7 +56,7 @@
       <Option name="type" type="QString" value="collection"/>
      </Option>
     </data_defined_properties>
-    <layer class="SimpleFill" enabled="1" id="{219c1579-f2c3-48b2-861d-208987de0e6c}" locked="0" pass="0">
+    <layer class="SimpleFill" enabled="1" id="{dbd3e15a-1b66-4265-9151-40e052f97a6a}" locked="0" pass="0">
      <Option type="Map">
       <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
       <Option name="color" type="QString" value="255,255,255,255,rgb:1,1,1,1"/>
@@ -82,7 +82,7 @@
   </LayoutItem>
   <GuideCollection visible="1"/>
  </PageCollection>
- <LayoutItem background="false" blendMode="0" excludeFromExports="0" frame="false" frameJoinStyle="miter" groupUuid="" halign="1" htmlState="0" id="" itemRotation="0" labelText="Fuentes: INEI 2017  |  OpenStreetMap (ODbL)  |  GADM 4.1  |  Proyeccion: UTM Zona 18S (EPSG:32718)  |  2026" marginX="0" marginY="0" opacity="1" outlineWidthM="0.3,mm" position="10,272,mm" positionLock="false" positionOnPage="10,272,mm" referencePoint="0" size="400,10,mm" templateUuid="{6868378e-6e32-4988-b698-fc9070b0b1b6}" type="65641" uuid="{6868378e-6e32-4988-b698-fc9070b0b1b6}" valign="32" visibility="1" zValue="7">
+ <LayoutItem background="false" blendMode="0" excludeFromExports="0" frame="false" frameJoinStyle="miter" groupUuid="" halign="1" htmlState="0" id="" itemRotation="0" labelText="Fuentes: INEI 2017  |  OpenStreetMap (ODbL)  |  GADM 4.1  |  Proyeccion: UTM Zona 18S (EPSG:32718)  |  2026" marginX="0" marginY="0" opacity="1" outlineWidthM="0.3,mm" position="10,272,mm" positionLock="false" positionOnPage="10,272,mm" referencePoint="0" size="400,10,mm" templateUuid="{e5dc96ad-0113-450a-b1a1-2ac8a0c4cbd9}" type="65641" uuid="{e5dc96ad-0113-450a-b1a1-2ac8a0c4cbd9}" valign="32" visibility="1" zValue="7">
   <FrameColor alpha="255" blue="0" green="0" red="0"/>
   <BackgroundColor alpha="255" blue="255" green="255" red="255"/>
   <LayoutObject>
@@ -144,7 +144,7 @@
    </dd_properties>
   </text-style>
  </LayoutItem>
- <LayoutItem anchorPoint="0" background="true" blendMode="0" excludeFromExports="0" file="arrows/NorthArrow_01.svg" frame="false" frameJoinStyle="miter" groupUuid="" id="" itemRotation="0" mapUuid="" mode="2" northMode="0" northOffset="0" opacity="1" outlineWidthM="0.3,mm" pictureHeight="24" pictureRotation="0" pictureWidth="24" position="272,240,mm" positionLock="false" positionOnPage="272,240,mm" referencePoint="0" resizeMode="0" size="24,30,mm" svgBorderColor="0,0,0,255,rgb:0,0,0,1" svgBorderWidth="0.2" svgFillColor="255,255,255,255,rgb:1,1,1,1" templateUuid="{4166905d-0dfd-47aa-8208-76a4cb0342ca}" type="65640" uuid="{4166905d-0dfd-47aa-8208-76a4cb0342ca}" visibility="1" zValue="6">
+ <LayoutItem anchorPoint="0" background="true" blendMode="0" excludeFromExports="0" file="arrows/NorthArrow_01.svg" frame="false" frameJoinStyle="miter" groupUuid="" id="" itemRotation="0" mapUuid="" mode="2" northMode="0" northOffset="0" opacity="1" outlineWidthM="0.3,mm" pictureHeight="24" pictureRotation="0" pictureWidth="24" position="272,240,mm" positionLock="false" positionOnPage="272,240,mm" referencePoint="0" resizeMode="0" size="24,30,mm" svgBorderColor="0,0,0,255,rgb:0,0,0,1" svgBorderWidth="0.2" svgFillColor="255,255,255,255,rgb:1,1,1,1" templateUuid="{c476b684-9380-4c35-9dfe-5b376c4ae6d8}" type="65640" uuid="{c476b684-9380-4c35-9dfe-5b376c4ae6d8}" visibility="1" zValue="6">
   <FrameColor alpha="255" blue="0" green="0" red="0"/>
   <BackgroundColor alpha="180" blue="255" green="255" red="255"/>
   <LayoutObject>
@@ -160,7 +160,7 @@
    </customproperties>
   </LayoutObject>
  </LayoutItem>
- <LayoutItem alignment="0" background="true" blendMode="0" boxContentSpace="1" excludeFromExports="0" frame="false" frameJoinStyle="miter" groupUuid="" height="3" id="" itemRotation="0" labelBarSpace="3" labelHorizontalPlacement="0" labelVerticalPlacement="0" lineCapStyle="square" lineJoinStyle="miter" mapUuid="{5cc1760e-916b-4089-942a-cc3a41768afb}" maxBarWidth="150" method="HorizontalAverage" minBarWidth="50" numMapUnitsPerScaleBarUnit="1" numSegments="3" numSegmentsLeft="0" numSubdivisions="1" numUnitsPerSegment="10000" opacity="1" outlineWidth="0.3" outlineWidthM="0.3,mm" position="14,252,mm" positionLock="false" positionOnPage="14,252,mm" referencePoint="0" segmentMillimeters="nan" segmentSizeMode="0" size="110,8,mm" style="Single Box" subdivisionsHeight="1.5" templateUuid="{5e7cd425-cfa0-4a1f-bba6-b32912482187}" type="65646" unitLabel="km" unitType="meters" uuid="{5e7cd425-cfa0-4a1f-bba6-b32912482187}" visibility="1" zValue="5">
+ <LayoutItem alignment="0" background="true" blendMode="0" boxContentSpace="1" excludeFromExports="0" frame="false" frameJoinStyle="miter" groupUuid="" height="3" id="" itemRotation="0" labelBarSpace="3" labelHorizontalPlacement="0" labelVerticalPlacement="0" lineCapStyle="square" lineJoinStyle="miter" mapUuid="{397cb166-2a59-46aa-8f35-bfd772530dbc}" maxBarWidth="150" method="HorizontalAverage" minBarWidth="50" numMapUnitsPerScaleBarUnit="1" numSegments="3" numSegmentsLeft="0" numSubdivisions="1" numUnitsPerSegment="10000" opacity="1" outlineWidth="0.3" outlineWidthM="0.3,mm" position="14,252,mm" positionLock="false" positionOnPage="14,252,mm" referencePoint="0" segmentMillimeters="nan" segmentSizeMode="0" size="110,8,mm" style="Single Box" subdivisionsHeight="1.5" templateUuid="{3b4c107c-3348-48dc-aa2c-2f424c45b253}" type="65646" unitLabel="km" unitType="meters" uuid="{3b4c107c-3348-48dc-aa2c-2f424c45b253}" visibility="1" zValue="5">
   <FrameColor alpha="255" blue="0" green="0" red="0"/>
   <BackgroundColor alpha="180" blue="255" green="255" red="255"/>
   <LayoutObject>
@@ -244,7 +244,7 @@
       <Option name="type" type="QString" value="collection"/>
      </Option>
     </data_defined_properties>
-    <layer class="SimpleLine" enabled="1" id="{41148470-eedf-4176-bfbc-1e8ee7bc2706}" locked="0" pass="0">
+    <layer class="SimpleLine" enabled="1" id="{c282f7b9-d968-4b2f-b9e5-bd17fe480103}" locked="0" pass="0">
      <Option type="Map">
       <Option name="align_dash_pattern" type="QString" value="0"/>
       <Option name="capstyle" type="QString" value="square"/>
@@ -293,7 +293,7 @@
       <Option name="type" type="QString" value="collection"/>
      </Option>
     </data_defined_properties>
-    <layer class="SimpleLine" enabled="1" id="{41148470-eedf-4176-bfbc-1e8ee7bc2706}" locked="0" pass="0">
+    <layer class="SimpleLine" enabled="1" id="{c282f7b9-d968-4b2f-b9e5-bd17fe480103}" locked="0" pass="0">
      <Option type="Map">
       <Option name="align_dash_pattern" type="QString" value="0"/>
       <Option name="capstyle" type="QString" value="square"/>
@@ -342,7 +342,7 @@
       <Option name="type" type="QString" value="collection"/>
      </Option>
     </data_defined_properties>
-    <layer class="SimpleLine" enabled="1" id="{41148470-eedf-4176-bfbc-1e8ee7bc2706}" locked="0" pass="0">
+    <layer class="SimpleLine" enabled="1" id="{c282f7b9-d968-4b2f-b9e5-bd17fe480103}" locked="0" pass="0">
      <Option type="Map">
       <Option name="align_dash_pattern" type="QString" value="0"/>
       <Option name="capstyle" type="QString" value="square"/>
@@ -391,7 +391,7 @@
       <Option name="type" type="QString" value="collection"/>
      </Option>
     </data_defined_properties>
-    <layer class="SimpleFill" enabled="1" id="{9faacc7b-a127-4652-97b0-23a8ba268000}" locked="0" pass="0">
+    <layer class="SimpleFill" enabled="1" id="{a6c6d958-bb6d-450c-9609-4fe613d1d7d6}" locked="0" pass="0">
      <Option type="Map">
       <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
       <Option name="color" type="QString" value="0,0,0,255,rgb:0,0,0,1"/>
@@ -424,7 +424,7 @@
       <Option name="type" type="QString" value="collection"/>
      </Option>
     </data_defined_properties>
-    <layer class="SimpleFill" enabled="1" id="{6a217187-7a9b-434e-adc3-f618d46b7262}" locked="0" pass="0">
+    <layer class="SimpleFill" enabled="1" id="{3728370b-57cb-44ba-b962-eaa0d3ff3df0}" locked="0" pass="0">
      <Option type="Map">
       <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
       <Option name="color" type="QString" value="255,255,255,255,rgb:1,1,1,1"/>
@@ -449,7 +449,7 @@
    </symbol>
   </fillSymbol2>
  </LayoutItem>
- <LayoutItem background="true" blendMode="0" boxSpace="2" columnCount="1" columnSpace="2" equalColumnWidth="0" excludeFromExports="0" frame="true" frameJoinStyle="miter" groupUuid="" id="" itemRotation="0" legendFilterByAtlas="0" map_uuid="{5cc1760e-916b-4089-942a-cc3a41768afb}" maxSymbolSize="0" minSymbolSize="0" opacity="1" outlineWidthM="0.3,mm" position="308,36,mm" positionLock="false" positionOnPage="308,36,mm" rasterBorder="1" rasterBorderColor="0,0,0,255,rgb:0,0,0,1" rasterBorderWidth="0" referencePoint="0" resizeToContents="1" size="64.5408,148.983,mm" splitLayer="0" symbolAlignment="1" symbolHeight="4" symbolWidth="7" syncMode="AllProjectLayers" templateUuid="{ec1c395f-fe35-4368-b937-176e915e41d9}" title="Leyenda" titleAlignment="1" type="65642" uuid="{ec1c395f-fe35-4368-b937-176e915e41d9}" visibility="1" wmsLegendHeight="25" wmsLegendWidth="50" wrapChar="" zValue="4">
+ <LayoutItem background="true" blendMode="0" boxSpace="2" columnCount="1" columnSpace="2" equalColumnWidth="0" excludeFromExports="0" frame="true" frameJoinStyle="miter" groupUuid="" id="" itemRotation="0" legendFilterByAtlas="0" map_uuid="{397cb166-2a59-46aa-8f35-bfd772530dbc}" maxSymbolSize="0" minSymbolSize="0" opacity="1" outlineWidthM="0.3,mm" position="308,36,mm" positionLock="false" positionOnPage="308,36,mm" rasterBorder="1" rasterBorderColor="0,0,0,255,rgb:0,0,0,1" rasterBorderWidth="0" referencePoint="0" resizeToContents="1" size="64.5408,148.983,mm" splitLayer="0" symbolAlignment="1" symbolHeight="4" symbolWidth="7" syncMode="AllProjectLayers" templateUuid="{3d32c54e-ca1f-4d0e-8000-567ac81a6b87}" title="Leyenda" titleAlignment="1" type="65642" uuid="{3d32c54e-ca1f-4d0e-8000-567ac81a6b87}" visibility="1" wmsLegendHeight="25" wmsLegendWidth="50" wrapChar="" zValue="4">
   <FrameColor alpha="255" blue="0" green="0" red="0"/>
   <BackgroundColor alpha="255" blue="255" green="255" red="255"/>
   <LayoutObject>
@@ -707,7 +707,7 @@
    </style>
   </styles>
  </LayoutItem>
- <LayoutItem background="true" blendMode="0" drawCanvasItems="true" enableZRange="0" excludeFromExports="0" followPreset="false" followPresetName="" frame="true" frameJoinStyle="miter" groupUuid="" id="" isTemporal="0" itemRotation="0" keepLayerSet="false" labelMargin="0,mm" mapFlags="0" mapRotation="0" opacity="1" outlineWidthM="0.3,mm" position="10,36,mm" positionLock="false" positionOnPage="10,36,mm" referencePoint="0" size="292,228,mm" templateUuid="{5cc1760e-916b-4089-942a-cc3a41768afb}" type="65639" uuid="{5cc1760e-916b-4089-942a-cc3a41768afb}" visibility="1" zValue="3">
+ <LayoutItem background="true" blendMode="0" drawCanvasItems="true" enableZRange="0" excludeFromExports="0" followPreset="false" followPresetName="" frame="true" frameJoinStyle="miter" groupUuid="" id="" isTemporal="0" itemRotation="0" keepLayerSet="true" labelMargin="0,mm" mapFlags="0" mapRotation="0" opacity="1" outlineWidthM="0.3,mm" position="10,36,mm" positionLock="false" positionOnPage="10,36,mm" referencePoint="0" size="292,228,mm" templateUuid="{397cb166-2a59-46aa-8f35-bfd772530dbc}" type="65639" uuid="{397cb166-2a59-46aa-8f35-bfd772530dbc}" visibility="1" zValue="3">
   <FrameColor alpha="255" blue="0" green="0" red="0"/>
   <BackgroundColor alpha="255" blue="255" green="255" red="255"/>
   <LayoutObject>
@@ -736,7 +736,11 @@
     <geographicflag>false</geographicflag>
    </spatialrefsys>
   </crs>
-  <LayerSet/>
+  <LayerSet>
+   <Layer name="IVH por Distrito" provider="ogr" source="C:\Users\DOKU\DEVELOPER\Economist-Projects\lima-water-access\outputs\lima_water.gpkg|layername=distritos_ivh">IVH_por_Distrito_3b98cc3f_1c66_4bd9_96e5_46d5a0b1a96e</Layer>
+   <Layer name="Clusteres LISA" provider="ogr" source="C:\Users\DOKU\DEVELOPER\Economist-Projects\lima-water-access\outputs\lima_water.gpkg|layername=lisa_clusters">Clusteres_LISA_c44328fd_a9e9_49d8_8011_aee321926104</Layer>
+   <Layer name="Infraestructura de Agua" provider="ogr" source="C:\Users\DOKU\DEVELOPER\Economist-Projects\lima-water-access\outputs\lima_water.gpkg|layername=infra_agua_osm">Infraestructura_de_Agua_96dfe151_1d7a_4ab1_a0a6_6d7a255803fa</Layer>
+  </LayerSet>
   <AtlasMap atlasDriven="0" margin="0.10000000000000001" scalingMode="2"/>
   <labelBlockingItems/>
   <atlasClippingSettings clippingType="1" enabled="0" forceLabelsInside="0" restrictLayers="0">
@@ -744,7 +748,7 @@
   </atlasClippingSettings>
   <itemClippingSettings clipSource="" clippingType="1" enabled="0" forceLabelsInside="0"/>
  </LayoutItem>
- <LayoutItem background="false" blendMode="0" excludeFromExports="0" frame="false" frameJoinStyle="miter" groupUuid="" halign="1" htmlState="0" id="" itemRotation="0" labelText="Indice IVH 2017  |  Deficit de cobertura  |  Densidad de hogares sin acceso  |  Distancia a infraestructura OSM" marginX="0" marginY="0" opacity="1" outlineWidthM="0.3,mm" position="10,26,mm" positionLock="false" positionOnPage="10,26,mm" referencePoint="0" size="400,8,mm" templateUuid="{281a59c3-9aa4-4ca1-9313-fe95fccca942}" type="65641" uuid="{281a59c3-9aa4-4ca1-9313-fe95fccca942}" valign="32" visibility="1" zValue="2">
+ <LayoutItem background="false" blendMode="0" excludeFromExports="0" frame="false" frameJoinStyle="miter" groupUuid="" halign="1" htmlState="0" id="" itemRotation="0" labelText="Indice IVH 2017  |  Deficit de cobertura  |  Densidad de hogares sin acceso  |  Distancia a infraestructura OSM" marginX="0" marginY="0" opacity="1" outlineWidthM="0.3,mm" position="10,26,mm" positionLock="false" positionOnPage="10,26,mm" referencePoint="0" size="400,8,mm" templateUuid="{1dc227f5-aa87-40af-b1ec-497bdb5f13a5}" type="65641" uuid="{1dc227f5-aa87-40af-b1ec-497bdb5f13a5}" valign="32" visibility="1" zValue="2">
   <FrameColor alpha="255" blue="0" green="0" red="0"/>
   <BackgroundColor alpha="255" blue="255" green="255" red="255"/>
   <LayoutObject>
@@ -806,7 +810,7 @@
    </dd_properties>
   </text-style>
  </LayoutItem>
- <LayoutItem background="false" blendMode="0" excludeFromExports="0" frame="false" frameJoinStyle="miter" groupUuid="" halign="1" htmlState="0" id="" itemRotation="0" labelText="Vulnerabilidad Hidrica en Lima Metropolitana" marginX="0" marginY="0" opacity="1" outlineWidthM="0.3,mm" position="10,6,mm" positionLock="false" positionOnPage="10,6,mm" referencePoint="0" size="400,18,mm" templateUuid="{98dac899-1312-4ce2-b882-66e0a046ea49}" type="65641" uuid="{98dac899-1312-4ce2-b882-66e0a046ea49}" valign="128" visibility="1" zValue="1">
+ <LayoutItem background="false" blendMode="0" excludeFromExports="0" frame="false" frameJoinStyle="miter" groupUuid="" halign="1" htmlState="0" id="" itemRotation="0" labelText="Vulnerabilidad Hidrica en Lima Metropolitana" marginX="0" marginY="0" opacity="1" outlineWidthM="0.3,mm" position="10,6,mm" positionLock="false" positionOnPage="10,6,mm" referencePoint="0" size="400,18,mm" templateUuid="{bdfb023e-89f8-4b78-a93b-2f4ef2659c4e}" type="65641" uuid="{bdfb023e-89f8-4b78-a93b-2f4ef2659c4e}" valign="128" visibility="1" zValue="1">
   <FrameColor alpha="255" blue="0" green="0" red="0"/>
   <BackgroundColor alpha="255" blue="255" green="255" red="255"/>
   <LayoutObject>

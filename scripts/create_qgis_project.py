@@ -310,6 +310,10 @@ map_item = QgsLayoutItemMap(layout)
 map_item.setExtent(QgsRectangle(249197, 8609962, 327156, 8725142))
 map_item.setCrs(QgsCoordinateReferenceSystem("EPSG:32718"))
 map_item.setFrameEnabled(True)
+# In headless mode there is no active canvas, so the map item has no layers
+# to render unless we set them explicitly.  Order: first = background.
+map_item.setLayers([layer_d, layer_l, layer_i])
+map_item.setKeepLayerSet(True)
 layout.addLayoutItem(map_item)
 _pos(map_item, 10, 36, 292, 228)
 
