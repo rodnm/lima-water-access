@@ -54,6 +54,7 @@ from qgis.core import (  # noqa: E402
     QgsLayoutItemMap,
     QgsLayoutItemPicture,
     QgsLayoutItemScaleBar,
+    QgsLayoutMeasurement,
     QgsLayoutPoint,
     QgsLayoutSize,
     QgsProject,
@@ -105,6 +106,167 @@ def _safe_remove(path: str) -> None:
         Path(path).unlink(missing_ok=True)
     except Exception:
         pass
+
+
+def _compute_point_weights(points_layer, weight_field, districts_layer,
+                           ivh_csv_path):
+    """Return a per-point weights array (float).
+
+    Order of preference:
+      1. If ``weight_field`` exists in the points layer, use it directly.
+      2. Otherwise spatial-join points with districts and look up
+         ``hogares_sin_acceso`` from ``ivh_table.csv`` keyed on NAME_3_norm.
+      3. If neither works, return None (caller should fall back to unweighted).
+    """
+    import csv
+
+    point_fields = [f.name() for f in points_layer.fields()]
+    if weight_field in point_fields:
+        ws = []
+        for feat in points_layer.getFeatures():
+            v = feat.attribute(weight_field)
+            ws.append(float(v) if v is not None else 0.0)
+        return ws
+
+    # Fallback: read CSV and do point-in-polygon via spatial index
+    from qgis.core import QgsSpatialIndex, QgsGeometry
+
+    if not Path(ivh_csv_path).exists():
+        return None
+    lookup = {}
+    with open(ivh_csv_path, encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            try:
+                lookup[row["distrito"]] = float(row["hogares_sin_acceso"])
+            except (KeyError, ValueError):
+                pass
+    if not lookup:
+        return None
+
+    # Map each district feature ID to its weight
+    name_field = "NAME_3_norm"
+    if name_field not in [f.name() for f in districts_layer.fields()]:
+        return None
+
+    feat_weight = {}
+    feat_geom = {}
+    for feat in districts_layer.getFeatures():
+        nm = feat.attribute(name_field)
+        if nm in lookup:
+            feat_weight[feat.id()] = lookup[nm]
+            feat_geom[feat.id()] = QgsGeometry(feat.geometry())
+
+    sindex = QgsSpatialIndex(districts_layer.getFeatures())
+
+    ws = []
+    for feat in points_layer.getFeatures():
+        pt_geom = feat.geometry()
+        candidates = sindex.intersects(pt_geom.boundingBox())
+        w = 0.0
+        for fid in candidates:
+            geom = feat_geom.get(fid)
+            if geom is not None and geom.contains(pt_geom):
+                w = feat_weight[fid]
+                break
+        ws.append(w)
+    return ws
+
+
+def _compute_gaussian_kde(layer, bbox, pixel_m, bw_m, weight_field=None,
+                          districts_layer=None, ivh_csv_path=None):
+    """Compute a weighted Gaussian KDE on a regular grid.
+
+    Identical algorithm to ``scripts/generate_kde_heatmap.py``:
+    weighted 2-D histogram + ``scipy.ndimage.gaussian_filter`` with
+    sigma = bw_m / pixel_m.  Returns (array, geotransform) ready to save
+    as a single-band GeoTIFF.
+
+    If ``weight_field`` is not present in ``layer`` but ``districts_layer`` and
+    ``ivh_csv_path`` are supplied, weights are derived via spatial join.
+    """
+    import numpy as np
+    from scipy.ndimage import gaussian_filter
+
+    xmin, ymin, xmax, ymax = bbox
+    nx = int(round((xmax - xmin) / pixel_m))
+    ny = int(round((ymax - ymin) / pixel_m))
+
+    xs, ys = [], []
+    for feat in layer.getFeatures():
+        pt = feat.geometry().asPoint()
+        xs.append(pt.x()); ys.append(pt.y())
+
+    weights = None
+    if weight_field is not None and districts_layer is not None and ivh_csv_path is not None:
+        weights = _compute_point_weights(
+            layer, weight_field, districts_layer, ivh_csv_path,
+        )
+    if weights is None:
+        weights = [1.0] * len(xs)
+
+    xs = np.asarray(xs); ys = np.asarray(ys); ws = np.asarray(weights, dtype=float)
+    positive = ws[ws > 0]
+    if positive.size:
+        fill = float(np.median(positive))
+        ws = np.where(ws > 0, ws, fill)
+    else:
+        ws = np.ones_like(ws)
+
+    xe = np.linspace(xmin, xmax, nx + 1)
+    ye = np.linspace(ymin, ymax, ny + 1)
+    grid, _, _ = np.histogram2d(xs, ys, bins=[xe, ye], weights=ws)
+    grid = grid.T  # rows = y, cols = x
+
+    sigma_px = bw_m / pixel_m
+    zz = gaussian_filter(grid, sigma=sigma_px)
+
+    # GDAL GeoTIFF: y descends from ymax → ymin, so flip the array vertically
+    geotransform = (xmin, pixel_m, 0.0, ymax, 0.0, -pixel_m)
+    return zz[::-1].astype("float32"), geotransform
+
+
+def _save_geotiff(array, geotransform, epsg, path):
+    """Write a 2-D numpy array as a single-band GeoTIFF (Float32)."""
+    from osgeo import gdal, osr
+
+    nrows, ncols = array.shape
+    drv = gdal.GetDriverByName("GTiff")
+    ds = drv.Create(path, ncols, nrows, 1, gdal.GDT_Float32,
+                    options=["COMPRESS=LZW", "TILED=YES"])
+    ds.SetGeoTransform(geotransform)
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(epsg)
+    ds.SetProjection(srs.ExportToWkt())
+    ds.GetRasterBand(1).WriteArray(array)
+    ds.FlushCache()
+    ds = None
+
+
+def _render_colorbar_png(path, v_min, v_max, label, cmap_name="inferno",
+                         orientation="vertical"):
+    """Render a standalone matplotlib colorbar to PNG.
+
+    Used to give the KDE layout a Python-style continuous colorbar
+    instead of the categorized raster legend that QGIS produces by default.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import matplotlib as mpl
+
+    if orientation == "vertical":
+        fig, ax = plt.subplots(figsize=(1.3, 5.5))
+    else:
+        fig, ax = plt.subplots(figsize=(5.5, 1.0))
+
+    norm = mpl.colors.Normalize(vmin=float(v_min), vmax=float(v_max))
+    cb = mpl.colorbar.ColorbarBase(
+        ax, cmap=plt.get_cmap(cmap_name), norm=norm, orientation=orientation,
+    )
+    cb.set_label(label, fontsize=10, labelpad=10)
+    cb.ax.tick_params(labelsize=9)
+    fig.savefig(path, dpi=300, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
 
 # ── Initialise QGIS (headless) ─────────────────────────────────────────────────
 app = QgsApplication([], False)
@@ -280,7 +442,10 @@ except AttributeError:
     pass
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# PRINT LAYOUT — A3 horizontal (420 × 297 mm)
+# PRINT LAYOUT IVH — A3 portrait (297 × 420 mm)
+# Lima's UTM extent has aspect ≈ 0.68 (much taller than wide), so portrait
+# fits the shape naturally and avoids the east-west overflow that landscape
+# produces.
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 MM = QgsUnitTypes.LayoutMillimeters
 
@@ -288,9 +453,9 @@ layout = QgsPrintLayout(project)
 layout.initializeDefaults()
 layout.setName("Lima Water Access")
 
-# Página A3 horizontal
+# Página A3 vertical
 page = layout.pageCollection().pages()[0]
-page.setPageSize(QgsLayoutSize(420, 297, MM))
+page.setPageSize(QgsLayoutSize(297, 420, MM))
 
 
 def _pos(item, x, y, w, h):
@@ -302,42 +467,43 @@ def _pos(item, x, y, w, h):
 # ── Título principal ───────────────────────────────────────────────────────────
 lbl_title = QgsLayoutItemLabel(layout)
 lbl_title.setText("Vulnerabilidad Hidrica en Lima Metropolitana")
-lbl_title.setFont(_bold_font("Arial", 18))
+lbl_title.setFont(_bold_font("Arial", 16))
 lbl_title.setFontColor(QColor("#1a1a2e"))
 lbl_title.setHAlign(_AlignLeft)
 lbl_title.setVAlign(_AlignVCenter)
 layout.addLayoutItem(lbl_title)
-_pos(lbl_title, 10, 6, 400, 18)
+_pos(lbl_title, 10, 8, 277, 14)
 
 # ── Subtítulo ─────────────────────────────────────────────────────────────────
 lbl_sub = QgsLayoutItemLabel(layout)
-lbl_sub.setText(
-    "Indice IVH 2017  |  Deficit de cobertura  |  Densidad de hogares sin acceso"
-    "  |  Distancia a infraestructura OSM"
-)
+lbl_sub.setText("Indice IVH 2017  |  Deficit, densidad y distancia a infraestructura OSM")
 lbl_sub.setFont(_font("Arial", 9))
 lbl_sub.setFontColor(QColor("#555555"))
 lbl_sub.setHAlign(_AlignLeft)
 layout.addLayoutItem(lbl_sub)
-_pos(lbl_sub, 10, 26, 400, 8)
+_pos(lbl_sub, 10, 24, 277, 8)
 
 # ── Marco del mapa ────────────────────────────────────────────────────────────
+# Aspect ratio del mapa (220×325) ≈ 0.677, idéntico al de la extensión de
+# Lima en UTM 18S → encaja sin desbordamiento.
 map_item = QgsLayoutItemMap(layout)
 map_item.setCrs(QgsCoordinateReferenceSystem("EPSG:32718"))
 map_item.setFrameEnabled(True)
+map_item.setFrameStrokeWidth(QgsLayoutMeasurement(0.3, MM))
+map_item.setFrameStrokeColor(QColor("#333333"))
 # In headless mode there is no active canvas, so the map item has no layers
 # to render unless we set them explicitly.  Order: first = background.
 map_item.setLayers([layer_d, layer_l, layer_i])
 map_item.setKeepLayerSet(True)
 layout.addLayoutItem(map_item)
-_pos(map_item, 10, 36, 292, 228)
+_pos(map_item, 10, 36, 220, 325)
 # setExtent MUST come AFTER _pos: when the item's physical size changes,
 # QGIS reflows the extent to fit the new aspect ratio.  Calling setExtent
 # before _pos leaves the extent with NaN values and the map renders blank.
 map_item.setExtent(QgsRectangle(249197, 8609962, 327156, 8725142))
 map_item.refresh()
 
-# ── Leyenda ───────────────────────────────────────────────────────────────────
+# ── Leyenda (panel vertical a la derecha) ─────────────────────────────────────
 legend = QgsLayoutItemLegend(layout)
 legend.setLinkedMap(map_item)
 legend.setAutoUpdateModel(True)
@@ -345,9 +511,9 @@ legend.setTitle("Leyenda")
 legend.setFrameEnabled(True)
 legend.setResizeToContents(True)
 layout.addLayoutItem(legend)
-_pos(legend, 308, 36, 102, 228)
+_pos(legend, 235, 36, 55, 325)
 
-# ── Barra de escala ───────────────────────────────────────────────────────────
+# ── Barra de escala (superpuesta en el mapa, esquina inf-izq) ────────────────
 scale = QgsLayoutItemScaleBar(layout)
 scale.setLinkedMap(map_item)
 try:
@@ -362,7 +528,7 @@ scale.setFont(_font("Arial", 7))
 scale.setBackgroundEnabled(True)
 scale.setBackgroundColor(QColor(255, 255, 255, 180))
 layout.addLayoutItem(scale)
-_pos(scale, 14, 252, 110, 8)
+_pos(scale, 15, 345, 80, 8)
 
 # ── Flecha de norte ───────────────────────────────────────────────────────────
 def _find_north_svg() -> str | None:
@@ -391,10 +557,9 @@ if north_svg:
     north_item.setBackgroundEnabled(True)
     north_item.setBackgroundColor(QColor(255, 255, 255, 180))
     layout.addLayoutItem(north_item)
-    _pos(north_item, 272, 240, 24, 30)
+    _pos(north_item, 200, 338, 22, 22)
     print(f"  Norte SVG: {north_svg}")
 else:
-    # Fallback: etiqueta de texto con símbolo unicode
     north_lbl = QgsLayoutItemLabel(layout)
     north_lbl.setText("N")
     north_lbl.setFont(_bold_font("Arial", 14))
@@ -404,7 +569,7 @@ else:
     north_lbl.setBackgroundEnabled(True)
     north_lbl.setBackgroundColor(QColor(255, 255, 255, 200))
     layout.addLayoutItem(north_lbl)
-    _pos(north_lbl, 272, 244, 24, 14)
+    _pos(north_lbl, 200, 344, 22, 14)
     print("  Norte: texto (SVG no encontrado)")
 
 # ── Atribución / fuentes ──────────────────────────────────────────────────────
@@ -417,7 +582,7 @@ lbl_attr.setFont(_font("Arial", 7))
 lbl_attr.setFontColor(QColor("#777777"))
 lbl_attr.setHAlign(_AlignLeft)
 layout.addLayoutItem(lbl_attr)
-_pos(lbl_attr, 10, 272, 400, 10)
+_pos(lbl_attr, 10, 405, 277, 8)
 
 # Registrar layout en el proyecto
 project.layoutManager().addLayout(layout)
@@ -448,58 +613,46 @@ except Exception as e:
     print(f"  AVISO QPT: {e}")
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# KDE HEATMAP via QGIS Processing
+# KDE HEATMAP — Gaussian (scipy) + Layout A3 portrait + colorbar matplotlib
+# Replicates the visual style of scripts/generate_kde_heatmap.py: weighted
+# Gaussian KDE (sigma=2000 m), Inferno colormap, continuous colorbar on the
+# side, portrait orientation that fits Lima's tall shape.
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 try:
     from qgis.core import (
-        QgsColorRampShader, QgsRasterBandStats, QgsRasterLayer,
-        QgsRasterShader, QgsSingleBandPseudoColorRenderer,
+        QgsColorRampShader, QgsRasterLayer, QgsRasterShader,
+        QgsSingleBandPseudoColorRenderer,
     )
-    # In headless mode the Processing plugin directory is not on sys.path by default
-    _plugins_dir = os.path.join(QGIS_PREFIX, "python", "plugins")
-    if _plugins_dir not in sys.path:
-        sys.path.insert(0, _plugins_dir)
-
-    from qgis.analysis import QgsNativeAlgorithms
-    QgsApplication.processingRegistry().addProvider(QgsNativeAlgorithms())
-
-    # Initialize the full Processing framework so Python-based algorithms
-    # (e.g. qgis:heatmapkerneldensityestimation) are registered.
-    from processing.core.Processing import Processing
-    Processing.initialize()
-    import processing as _proc
 
     OUT_KDE_TIF = str(ROOT / "outputs" / "kde_raster.tif")
     OUT_KDE_PNG = str(ROOT / "outputs" / "kde_heatmap.png")
+    OUT_KDE_CBAR = str(ROOT / "outputs" / "kde_colorbar.png")
 
-    kde_params = {
-        "INPUT":        layer_p,
-        "RADIUS":       2000,       # metres — matches generate_kde_heatmap.py
-        "PIXEL_SIZE":   100,
-        "KERNEL":       0,          # Quartic
-        "DECAY":        0,
-        "OUTPUT_VALUE": 0,          # raw kernel density values
-        "OUTPUT":       OUT_KDE_TIF,
-    }
-    # Use weight field if the layer has it (requires re-running export_qgis_layers.py)
-    field_names = [f.name() for f in layer_p.fields()]
-    if "hogares_sin_acceso" in field_names:
-        kde_params["WEIGHT_FIELD"] = "hogares_sin_acceso"
-        print("  KDE: usando hogares_sin_acceso como campo de peso")
-    else:
-        print("  KDE: sin campo de peso (ejecuta export_qgis_layers.py para activarlo)")
+    BBOX_LIMA = (249197, 8609962, 327156, 8725142)
+    PIXEL_M, BW_M = 100, 2000
+
+    print(f"  KDE: Gaussian sigma={BW_M} m, peso = hogares_sin_acceso por distrito")
+
+    # Compute weighted Gaussian KDE — same algorithm as generate_kde_heatmap.py.
+    # Weights come either from the points layer field (if export_qgis_layers.py
+    # was re-run) or from a spatial join against the districts layer + IVH CSV.
+    zz, geotransform = _compute_gaussian_kde(
+        layer_p, BBOX_LIMA, PIXEL_M, BW_M,
+        weight_field="hogares_sin_acceso",
+        districts_layer=layer_d,
+        ivh_csv_path=str(ROOT / "outputs" / "ivh_table.csv"),
+    )
+    v_min, v_max = float(zz.min()), float(zz.max())
+    print(f"  KDE: grid {zz.shape[1]}x{zz.shape[0]}, valores [{v_min:.2f}, {v_max:.2f}]")
 
     _safe_remove(OUT_KDE_TIF)
-    _proc.run("qgis:heatmapkerneldensityestimation", kde_params)
+    _save_geotiff(zz, geotransform, 32718, OUT_KDE_TIF)
 
     kde_layer = QgsRasterLayer(OUT_KDE_TIF, "KDE — Densidad hidrica")
     if not kde_layer.isValid():
         raise RuntimeError("KDE raster no valido")
 
-    # ── Estilo Inferno ────────────────────────────────────────────────────────
-    stats    = kde_layer.dataProvider().bandStatistics(1, QgsRasterBandStats.All)
-    v_min, v_max = stats.minimumValue, stats.maximumValue
-
+    # ── Estilo Inferno (mismas paradas que el script Python/matplotlib) ──────
     inferno = [
         (0.000, "#000004"),
         (0.250, "#420a68"),
@@ -527,49 +680,55 @@ try:
     kde_layer.setRenderer(renderer)
     kde_layer.triggerRepaint()
 
-    # ── Añadir al proyecto (encima del grupo OSM) ─────────────────────────────
     project.addMapLayer(kde_layer, False)
     root.insertChildNode(0, QgsLayerTreeLayer(kde_layer))
 
-    # ── Layout KDE A3 ────────────────────────────────────────────────────────
+    # ── Colorbar continuo (renderizado con matplotlib, como en Python) ──────
+    _render_colorbar_png(
+        OUT_KDE_CBAR, v_min, v_max,
+        label="Densidad ponderada\n(hogares sin acceso formal)",
+        cmap_name="inferno", orientation="vertical",
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Layout KDE — A3 portrait (297 × 420 mm)
+    # ─────────────────────────────────────────────────────────────────────────
     kde_layout = QgsPrintLayout(project)
     kde_layout.initializeDefaults()
     kde_layout.setName("KDE Vulnerabilidad Hidrica")
-    kde_layout.pageCollection().pages()[0].setPageSize(QgsLayoutSize(420, 297, MM))
+    kde_layout.pageCollection().pages()[0].setPageSize(QgsLayoutSize(297, 420, MM))
 
     # Título
     lbl_k_title = QgsLayoutItemLabel(kde_layout)
     lbl_k_title.setText(
-        "Densidad de Hogares sin Acceso Formal al Agua — Lima Metropolitana"
+        "Densidad de Hogares sin Acceso Formal al Agua\nLima Metropolitana"
     )
     lbl_k_title.setFont(_bold_font("Arial", 14))
+    lbl_k_title.setFontColor(QColor("#1a1a2e"))
     lbl_k_title.setHAlign(_AlignLeft)
     kde_layout.addLayoutItem(lbl_k_title)
-    _pos(lbl_k_title, 10, 8, 400, 14)
+    _pos(lbl_k_title, 10, 8, 277, 18)
 
-    # Marco del mapa
+    # Marco del mapa (aspect ratio 235/345 ≈ 0.68, encaja Lima sin desbordar)
     kde_map = QgsLayoutItemMap(kde_layout)
     kde_map.setCrs(QgsCoordinateReferenceSystem("EPSG:32718"))
     kde_map.setFrameEnabled(True)
-    kde_map.setLayers([kde_layer, layer_d])   # KDE encima, contorno distritos
+    kde_map.setFrameStrokeWidth(QgsLayoutMeasurement(0.3, MM))
+    kde_map.setFrameStrokeColor(QColor("#333333"))
+    kde_map.setLayers([kde_layer, layer_d])   # KDE encima, distritos para contornos
     kde_map.setKeepLayerSet(True)
     kde_layout.addLayoutItem(kde_map)
-    _pos(kde_map, 10, 28, 300, 244)
-    # setExtent AFTER _pos — same constraint as the IVH map_item
-    kde_map.setExtent(QgsRectangle(249197, 8609962, 327156, 8725142))
+    _pos(kde_map, 10, 32, 235, 345)
+    kde_map.setExtent(QgsRectangle(*BBOX_LIMA))
     kde_map.refresh()
 
-    # Leyenda
-    kde_legend = QgsLayoutItemLegend(kde_layout)
-    kde_legend.setLinkedMap(kde_map)
-    kde_legend.setAutoUpdateModel(True)
-    kde_legend.setTitle("Densidad")
-    kde_legend.setFrameEnabled(True)
-    kde_legend.setResizeToContents(True)
-    kde_layout.addLayoutItem(kde_legend)
-    _pos(kde_legend, 316, 28, 94, 80)
+    # Colorbar continuo a la derecha (Picture de matplotlib)
+    kde_cbar = QgsLayoutItemPicture(kde_layout)
+    kde_cbar.setPicturePath(OUT_KDE_CBAR)
+    kde_layout.addLayoutItem(kde_cbar)
+    _pos(kde_cbar, 250, 60, 40, 250)
 
-    # Barra de escala
+    # Barra de escala (superpuesta en esquina inf-izq del mapa)
     kde_scale = QgsLayoutItemScaleBar(kde_layout)
     kde_scale.setLinkedMap(kde_map)
     try:
@@ -578,32 +737,39 @@ try:
         pass
     kde_scale.setUnitsPerSegment(10000)
     kde_scale.setNumberOfSegments(3)
+    kde_scale.setNumberOfSegmentsLeft(0)
     kde_scale.setUnitLabel("km")
     kde_scale.setFont(_font("Arial", 7))
+    kde_scale.setBackgroundEnabled(True)
+    kde_scale.setBackgroundColor(QColor(255, 255, 255, 180))
     kde_layout.addLayoutItem(kde_scale)
-    _pos(kde_scale, 14, 258, 110, 7)
+    _pos(kde_scale, 15, 360, 80, 8)
 
-    # Flecha de norte
-    north_svg = _find_north_svg()
-    if north_svg:
+    # Flecha de norte (esquina inf-derecha del mapa)
+    north_svg_kde = _find_north_svg()
+    if north_svg_kde:
         kde_north = QgsLayoutItemPicture(kde_layout)
-        kde_north.setPicturePath(north_svg)
+        kde_north.setPicturePath(north_svg_kde)
         try:
             kde_north.setNorthMode(QgsLayoutItemPicture.GridNorth)
         except Exception:
             pass
+        kde_north.setBackgroundEnabled(True)
+        kde_north.setBackgroundColor(QColor(255, 255, 255, 180))
         kde_layout.addLayoutItem(kde_north)
-        _pos(kde_north, 278, 250, 20, 26)
+        _pos(kde_north, 215, 350, 22, 22)
 
     # Atribución
     lbl_k_attr = QgsLayoutItemLabel(kde_layout)
     lbl_k_attr.setText(
-        "Fuentes: INEI 2017 · OSM ODbL · GADM 4.1  |  EPSG:32718  |  2026"
+        "Fuentes: INEI 2017  |  OpenStreetMap (ODbL)  |  GADM 4.1  |  "
+        "Proyeccion: UTM Zona 18S (EPSG:32718)  |  2026"
     )
     lbl_k_attr.setFont(_font("Arial", 7))
     lbl_k_attr.setFontColor(QColor("#777777"))
+    lbl_k_attr.setHAlign(_AlignLeft)
     kde_layout.addLayoutItem(lbl_k_attr)
-    _pos(lbl_k_attr, 10, 272, 400, 10)
+    _pos(lbl_k_attr, 10, 405, 277, 8)
 
     project.layoutManager().addLayout(kde_layout)
 
@@ -620,7 +786,9 @@ try:
         print(f"  AVISO KDE PNG: codigo {r}")
 
 except Exception as _kde_err:
-    print(f"  AVISO: KDE Processing omitido — {_kde_err}")
+    import traceback
+    print(f"  AVISO: KDE omitido — {_kde_err}")
+    traceback.print_exc()
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # GUARDAR PROYECTO
