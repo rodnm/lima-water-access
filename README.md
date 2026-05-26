@@ -61,7 +61,7 @@ Se fija `numpy.random.seed(42)` inmediatamente antes de cada llamada a `esda.Mor
 | **Python 3.12** vía `uv` | Pipeline y análisis |
 | **Docker Desktop** | PostGIS 16-3.4 |
 | **GDAL / ogr2ogr** | Extracción del PBF de OSM (incluido con QGIS) |
-| **QGIS 4** | Abrir `qgis/lima_water.qgz`; generar Print Layout y KDE |
+| **QGIS 4** | Abrir `qgis/lima_water.qgz` (proyecto pre-estilizado) |
 
 ### Inicio rápido
 
@@ -114,7 +114,7 @@ uv run python scripts/export_qgis_layers.py
 uv run python scripts/generate_kde_heatmap.py
 ```
 
-Luego abrir `qgis/lima_water.qgz` en QGIS. Para más detalles sobre el flujo de trabajo QGIS ver **[`docs/qgis_workflow.md`](docs/qgis_workflow.md)**.
+Luego abrir `qgis/lima_water.qgz` en QGIS — el proyecto carga las 4 capas ya estilizadas y con el Print Layout configurado.
 
 ---
 
@@ -160,25 +160,28 @@ lima-water-access/
 │   └── 02_spatial_queries.sql       # Consulta CTE de distancias + respaldo centroide
 ├── scripts/
 │   ├── export_qgis_layers.py        # Exporta 4 capas a outputs/lima_water.gpkg
-│   ├── create_qgis_project.py       # Genera qgis/lima_water.qgz vía PyQGIS 4
-│   └── diagnose_overpass.py         # Prueba conectividad con endpoints Overpass API
+│   ├── create_qgis_project.py       # Genera qgis/lima_water.qgz + map_static.png vía PyQGIS 4
+│   └── generate_kde_heatmap.py      # Genera outputs/kde_heatmap.png (scipy + matplotlib)
 ├── notebooks/
 │   └── analysis.ipynb               # Análisis narrativo de extremo a extremo
 ├── qgis/
 │   ├── lima_water.qgz               # Proyecto QGIS 4 estilizado (generado por script)
 │   └── layouts/
-│       └── lima_water_print.qpt     # Plantilla de Print Layout (guardar desde QGIS)
-├── docs/
-│   └── qgis_workflow.md             # Guía paso a paso: Print Layout + KDE
+│       └── lima_water_print.qpt     # Plantilla QPT del Print Layout
 ├── data/
-│   ├── raw/                         # Excel del Censo, shapefiles GADM, osmconf.ini
-│   │   └── peru-latest.osm.pbf      # Extracto Geofabrik (descargar primero, 229 MB)
-│   └── processed/
+│   ├── osmconf.ini                  # Configuración GDAL para extracción OSM
+│   └── raw/
+│       ├── censo_agua_lima.xlsx     # Datos REDATAM — Censo INEI 2017
+│       ├── censo_agua_lima.pdf      # Reporte original REDATAM (referencia)
+│       ├── gadm41_PER_shp/          # Shapefiles GADM 4.1 — solo nivel 3 (distritos)
+│       └── peru-latest.osm.pbf      # Extracto Geofabrik (descargar primero, 229 MB)
 └── outputs/
     ├── ivh_table.csv                # 43 distritos ordenados por IVH
     ├── lima_ivh_lisa.geojson        # Clústeres LISA para QGIS / web
     ├── lima_water.gpkg              # GeoPackage con 4 capas para QGIS
-    └── map_interactive.html         # Coropleta Folium interactiva
+    ├── map_interactive.html         # Coropleta Folium interactiva
+    ├── map_static.png               # Print Layout A3, 300 dpi
+    └── kde_heatmap.png              # Mapa de calor KDE ponderado, 300 dpi
 ```
 
 ---
