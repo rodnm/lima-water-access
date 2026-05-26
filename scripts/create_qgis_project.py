@@ -5,9 +5,12 @@ Run from the project root with the QGIS-bundled Python:
     & "C:/Program Files/QGIS 4.0.2/bin/python-qgis.bat" scripts/create_qgis_project.py
 
 Produces:
-    qgis/lima_water.qgz           — QGIS 4 project with styled layers + print layout
+    qgis/lima_water.qgz                — QGIS 4 project with styled layers + layouts
     qgis/layouts/lima_water_print.qpt  — reusable print layout template
-    outputs/map_static.png        — A3 map exported at 300 dpi
+    outputs/map_static.png             — IVH choropleth A3, 300 dpi
+    outputs/kde_heatmap.png            — KDE heatmap A3, 300 dpi (requires
+                                         export_qgis_layers.py run first for weights)
+    outputs/kde_raster.tif             — intermediate KDE raster (can be deleted)
 
 Layers (panel order top → bottom):
     Infraestructura OSM
@@ -425,6 +428,176 @@ try:
     print(f"  qgis/layouts/lima_water_print.qpt guardado")
 except Exception as e:
     print(f"  AVISO QPT: {e}")
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# KDE HEATMAP via QGIS Processing
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+try:
+    from qgis.core import (
+        QgsColorRampShader, QgsRasterBandStats, QgsRasterLayer,
+        QgsRasterShader, QgsSingleBandPseudoColorRenderer,
+    )
+    # In headless mode the Processing plugin directory is not on sys.path by default
+    _plugins_dir = os.path.join(QGIS_PREFIX, "python", "plugins")
+    if _plugins_dir not in sys.path:
+        sys.path.insert(0, _plugins_dir)
+
+    from qgis.analysis import QgsNativeAlgorithms
+    QgsApplication.processingRegistry().addProvider(QgsNativeAlgorithms())
+
+    # Initialize the full Processing framework so Python-based algorithms
+    # (e.g. qgis:heatmapkerneldensityestimation) are registered.
+    from processing.core.Processing import Processing
+    Processing.initialize()
+    import processing as _proc
+
+    OUT_KDE_TIF = str(ROOT / "outputs" / "kde_raster.tif")
+    OUT_KDE_PNG = str(ROOT / "outputs" / "kde_heatmap.png")
+
+    kde_params = {
+        "INPUT":        layer_p,
+        "RADIUS":       2000,       # metres — matches generate_kde_heatmap.py
+        "PIXEL_SIZE":   100,
+        "KERNEL":       0,          # Quartic
+        "DECAY":        0,
+        "OUTPUT_VALUE": 0,          # raw kernel density values
+        "OUTPUT":       OUT_KDE_TIF,
+    }
+    # Use weight field if the layer has it (requires re-running export_qgis_layers.py)
+    field_names = [f.name() for f in layer_p.fields()]
+    if "hogares_sin_acceso" in field_names:
+        kde_params["WEIGHT_FIELD"] = "hogares_sin_acceso"
+        print("  KDE: usando hogares_sin_acceso como campo de peso")
+    else:
+        print("  KDE: sin campo de peso (ejecuta export_qgis_layers.py para activarlo)")
+
+    _proc.run("qgis:heatmapkerneldensityestimation", kde_params)
+
+    kde_layer = QgsRasterLayer(OUT_KDE_TIF, "KDE — Densidad hidrica")
+    if not kde_layer.isValid():
+        raise RuntimeError("KDE raster no valido")
+
+    # ── Estilo Inferno ────────────────────────────────────────────────────────
+    stats    = kde_layer.dataProvider().bandStatistics(1, QgsRasterBandStats.All)
+    v_min, v_max = stats.minimumValue, stats.maximumValue
+
+    inferno = [
+        (0.000, "#000004"),
+        (0.250, "#420a68"),
+        (0.500, "#932667"),
+        (0.750, "#dd513a"),
+        (0.875, "#fca50a"),
+        (1.000, "#fcffa4"),
+    ]
+    ramp_items = [
+        QgsColorRampShader.ColorRampItem(
+            v_min + frac * (v_max - v_min), QColor(hex_c)
+        )
+        for frac, hex_c in inferno
+    ]
+    color_ramp = QgsColorRampShader()
+    color_ramp.setColorRampType(QgsColorRampShader.Interpolated)
+    color_ramp.setColorRampItemList(ramp_items)
+
+    shader = QgsRasterShader()
+    shader.setRasterShaderFunction(color_ramp)
+
+    renderer = QgsSingleBandPseudoColorRenderer(
+        kde_layer.dataProvider(), 1, shader
+    )
+    kde_layer.setRenderer(renderer)
+
+    # ── Añadir al proyecto (encima del grupo OSM) ─────────────────────────────
+    project.addMapLayer(kde_layer, False)
+    root.insertChildNode(0, QgsLayerTreeLayer(kde_layer))
+
+    # ── Layout KDE A3 ────────────────────────────────────────────────────────
+    kde_layout = QgsPrintLayout(project)
+    kde_layout.initializeDefaults()
+    kde_layout.setName("KDE Vulnerabilidad Hidrica")
+    kde_layout.pageCollection().pages()[0].setPageSize(QgsLayoutSize(420, 297, MM))
+
+    # Título
+    lbl_k_title = QgsLayoutItemLabel(kde_layout)
+    lbl_k_title.setText(
+        "Densidad de Hogares sin Acceso Formal al Agua — Lima Metropolitana"
+    )
+    lbl_k_title.setFont(_bold_font("Arial", 14))
+    lbl_k_title.setHAlign(_AlignLeft)
+    kde_layout.addLayoutItem(lbl_k_title)
+    _pos(lbl_k_title, 10, 8, 400, 14)
+
+    # Marco del mapa
+    kde_map = QgsLayoutItemMap(kde_layout)
+    kde_map.setExtent(QgsRectangle(249197, 8609962, 327156, 8725142))
+    kde_map.setCrs(QgsCoordinateReferenceSystem("EPSG:32718"))
+    kde_map.setFrameEnabled(True)
+    kde_map.setLayers([kde_layer, layer_d])   # KDE encima, contorno distritos
+    kde_map.setKeepLayerSet(True)
+    kde_layout.addLayoutItem(kde_map)
+    _pos(kde_map, 10, 28, 300, 244)
+
+    # Leyenda
+    kde_legend = QgsLayoutItemLegend(kde_layout)
+    kde_legend.setLinkedMap(kde_map)
+    kde_legend.setAutoUpdateModel(True)
+    kde_legend.setTitle("Densidad")
+    kde_legend.setFrameEnabled(True)
+    kde_legend.setResizeToContents(True)
+    kde_layout.addLayoutItem(kde_legend)
+    _pos(kde_legend, 316, 28, 94, 80)
+
+    # Barra de escala
+    kde_scale = QgsLayoutItemScaleBar(kde_layout)
+    kde_scale.setLinkedMap(kde_map)
+    try:
+        kde_scale.setStyle("Single Box")
+    except Exception:
+        pass
+    kde_scale.setUnitsPerSegment(10000)
+    kde_scale.setNumberOfSegments(3)
+    kde_scale.setUnitLabel("km")
+    kde_scale.setFont(_font("Arial", 7))
+    kde_layout.addLayoutItem(kde_scale)
+    _pos(kde_scale, 14, 258, 110, 7)
+
+    # Flecha de norte
+    north_svg = _find_north_svg()
+    if north_svg:
+        kde_north = QgsLayoutItemPicture(kde_layout)
+        kde_north.setPicturePath(north_svg)
+        try:
+            kde_north.setNorthMode(QgsLayoutItemPicture.GridNorth)
+        except Exception:
+            pass
+        kde_layout.addLayoutItem(kde_north)
+        _pos(kde_north, 278, 250, 20, 26)
+
+    # Atribución
+    lbl_k_attr = QgsLayoutItemLabel(kde_layout)
+    lbl_k_attr.setText(
+        "Fuentes: INEI 2017 · OSM ODbL · GADM 4.1  |  EPSG:32718  |  2026"
+    )
+    lbl_k_attr.setFont(_font("Arial", 7))
+    lbl_k_attr.setFontColor(QColor("#777777"))
+    kde_layout.addLayoutItem(lbl_k_attr)
+    _pos(lbl_k_attr, 10, 272, 400, 10)
+
+    project.layoutManager().addLayout(kde_layout)
+
+    # ── Exportar PNG ──────────────────────────────────────────────────────────
+    kde_exp = QgsLayoutExporter(kde_layout)
+    kde_img = QgsLayoutExporter.ImageExportSettings()
+    kde_img.dpi = 300
+    r = kde_exp.exportToImage(OUT_KDE_PNG, kde_img)
+    if r == QgsLayoutExporter.Success:
+        size_kb = Path(OUT_KDE_PNG).stat().st_size // 1024
+        print(f"  outputs/kde_heatmap.png exportado ({size_kb} KB, 300 dpi)")
+    else:
+        print(f"  AVISO KDE PNG: codigo {r}")
+
+except Exception as _kde_err:
+    print(f"  AVISO: KDE Processing omitido — {_kde_err}")
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # GUARDAR PROYECTO

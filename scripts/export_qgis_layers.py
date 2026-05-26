@@ -89,9 +89,24 @@ def main() -> None:
     infra = load_from_postgis("infra_agua_osm")
     print(f"  infra_agua_osm: {len(infra)} features, CRS={infra.crs}")
 
-    # ── Layer 4: lugares_poblados ──────────────────────────────────────────
+    # ── Layer 4: lugares_poblados (with hogares_sin_acceso weight) ────────
     print("Loading lugares_poblados from PostGIS…")
     lugares = load_from_postgis("lugares_poblados")
+    # Spatial join: assign district-level hogares_sin_acceso to each place
+    # so QGIS Processing can use it as weight field for KDE Heatmap.
+    lugares_w = gpd.sjoin(
+        lugares,
+        layer1[["hogares_sin_acceso", "geometry"]],
+        how="left",
+        predicate="within",
+    )
+    lugares_w = lugares_w[~lugares_w.index.duplicated(keep="first")]
+    lugares_w["hogares_sin_acceso"] = lugares_w["hogares_sin_acceso"].fillna(
+        lugares_w["hogares_sin_acceso"].median()
+    )
+    keep_l = [c for c in ["place", "name", "hogares_sin_acceso", "geometry"]
+              if c in lugares_w.columns]
+    lugares = lugares_w[keep_l].copy()
     print(f"  lugares_poblados: {len(lugares)} features, CRS={lugares.crs}")
 
     # Write GeoPackage (overwrite each layer)

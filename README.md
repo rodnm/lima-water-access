@@ -95,9 +95,9 @@ uv run jupyter lab notebooks/analysis.ipynb
 | Mapa interactivo | `outputs/map_interactive.html` | Coropleta Folium + marcadores LISA |
 | Capas QGIS | `outputs/lima_water.gpkg` | GeoPackage con 4 capas (distritos_ivh, lisa_clusters, infra_agua_osm, lugares_poblados) |
 | Proyecto QGIS | `qgis/lima_water.qgz` | Proyecto estilizado: coropleta IVH, LISA, marcadores de infraestructura |
-| Mapa estático | `outputs/map_static.png` | Print Layout A3, 300 dpi — generado automáticamente por `create_qgis_project.py` |
+| Mapa estático | `outputs/map_static.png` | Coropleta IVH A3, 300 dpi — `create_qgis_project.py` |
 | Plantilla layout | `qgis/layouts/lima_water_print.qpt` | Plantilla QPT del Print Layout para edición en QGIS |
-| Mapa de calor KDE | `outputs/kde_heatmap.png` | Densidad KDE ponderada por hogares sin acceso — generado automáticamente por `generate_kde_heatmap.py` |
+| Mapa de calor KDE | `outputs/kde_heatmap.png` | KDE ponderado A3, 300 dpi — `create_qgis_project.py` (QGIS Processing) o `generate_kde_heatmap.py` (Python puro) |
 
 ### Flujo de trabajo QGIS
 
@@ -107,10 +107,10 @@ El proyecto QGIS se genera programáticamente — no es necesario estilizar manu
 # Regenerar GeoPackage (si outputs/lima_water.gpkg no existe)
 uv run python scripts/export_qgis_layers.py
 
-# Regenerar proyecto QGIS + map_static.png (requiere QGIS 4 instalado)
+# Regenerar proyecto QGIS + map_static.png + kde_heatmap.png (requiere QGIS 4)
 & "C:/Program Files/QGIS 4.0.2/bin/python-qgis.bat" scripts/create_qgis_project.py
 
-# Regenerar mapa de calor KDE (Python puro, sin QGIS)
+# Alternativa: KDE en Python puro, sin necesidad de QGIS
 uv run python scripts/generate_kde_heatmap.py
 ```
 
