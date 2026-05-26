@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.0] — 2026-05-26
+
+### Changed
+
+- **`scripts/create_qgis_project.py`**: ambos layouts rediseñados de A3 landscape a **A3 portrait (297×420 mm)** para ajustarse al aspect ratio real de Lima Metropolitana (W/H ≈ 0.677). El layout landscape producía ~88 km de relleno horizontal (océano + montañas fuera de Lima).
+- **KDE en `create_qgis_project.py`**: reemplazado el algoritmo Quartic de QGIS Processing por **`scipy.ndimage.gaussian_filter`** (σ = 2 000 m, grid 100 m/píxel) — el mismo algoritmo que `generate_kde_heatmap.py`. El mapa de calor QGIS y el Python son ahora visualmente idénticos.
+- **Colorbar KDE**: generada con **matplotlib** (`ColorbarBase`, paleta Inferno) y embebida como `QgsLayoutItemPicture`. Reemplaza el renderer en escala de grises que QGIS usaba por defecto.
+- **Dimensiones de frames** (IVH): mapa 220×325 mm (aspect 0.677), leyenda 55×325 mm — sin desbordamiento horizontal.
+- **Dimensiones de frames** (KDE): mapa 235×345 mm (aspect 0.681), colorbar 40×250 mm — sin desbordamiento horizontal.
+- **`_safe_remove()`**: elimina el PNG antes de exportar para evitar `GDAL ERROR 6 — PNG driver does not support update access` en ejecuciones sucesivas.
+- **`setExtent()` después de `_pos()`**: corrección del bug que producía mapas en blanco (NaN en eje Y de la extensión). Orden correcto: `addLayoutItem` → `_pos` → `setExtent` → `refresh`.
+
+---
+
 ## [0.4.0] — 2026-05-25
 
 ### Added
